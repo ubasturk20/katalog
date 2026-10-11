@@ -1,0 +1,920 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Görsel Katalog</title>
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<style>
+:root{
+  --bg:#f6f2ec; --panel:#fffdf9; --side:#fbf8f3; --ink:#2b2119; --muted:#7a6a5c; --line:#e4dbcf;
+  --accent:#b5651d; --accent-ink:#fff; --accent-soft:#f3e3d2; --chip:#efe7dc; --danger:#b3261e;
+  --shadow:0 1px 2px rgba(43,33,25,.06),0 6px 18px rgba(43,33,25,.07); --overlay:#15110d;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#17130f; --panel:#221c16; --side:#1c1712; --ink:#efe6da; --muted:#a8988a; --line:#3a3027;
+    --accent:#e08a3c; --accent-ink:#1a120a; --accent-soft:#3a2a1b; --chip:#2e261e; --danger:#ff8a80;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 22px rgba(0,0,0,.35); --overlay:#0b0907;}
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+.app{display:grid;grid-template-columns:300px 1fr;grid-template-rows:auto 1fr;height:100vh}
+header{grid-column:1/-1;border-bottom:1px solid var(--line);background:var(--bg);padding:12px 18px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+h1{font:600 22px/1.1 Georgia,"Times New Roman",serif;margin:0 8px 0 0;white-space:nowrap}
+.search{flex:1 1 240px;display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:0 12px;height:38px}
+.search input{border:0;outline:0;background:transparent;width:100%;height:100%}
+.seg{display:flex;background:var(--chip);border-radius:10px;padding:3px}
+.seg button{border:0;background:transparent;padding:5px 11px;border-radius:8px;color:var(--muted)}
+.seg button[aria-pressed=true]{background:var(--panel);color:var(--ink);box-shadow:var(--shadow)}
+select{height:38px;border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:0 8px;max-width:180px}
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--panel);border-radius:9px;padding:0 12px;height:38px;white-space:nowrap;text-decoration:none;color:var(--ink);font-size:14px}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.on{background:var(--accent-soft);border-color:var(--accent)}
+.btn.sm{height:30px;padding:0 10px;font-size:13px}
+.btn:disabled{opacity:.45;cursor:default}
+.status{font-size:12.5px;color:var(--muted);white-space:nowrap}
+.status.dirty{color:var(--accent)}
+.menuwrap{position:relative}
+.menu{position:absolute;right:0;top:44px;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:6px;min-width:230px;z-index:20}
+.menu button{display:block;width:100%;text-align:left;border:0;background:transparent;padding:8px 10px;border-radius:8px;font-size:14px}
+.menu button:hover{background:var(--chip)}
+/* sidebar */
+aside.side{border-right:1px solid var(--line);background:var(--side);overflow:auto;padding:12px 10px 40px}
+.sideh{display:flex;justify-content:space-between;align-items:center;padding:4px 6px 8px}
+.sideh b{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.tree,.tree ul{list-style:none;margin:0;padding:0}
+.tree ul{padding-left:16px;border-left:1px dashed var(--line);margin-left:11px}
+.node{display:flex;align-items:center;gap:4px;padding:4px 6px;border-radius:8px;cursor:pointer;user-select:none;position:relative}
+.node:hover{background:var(--chip)}
+.node.sel{background:var(--accent-soft);box-shadow:inset 3px 0 0 var(--accent)}
+.node.drop{outline:2px dashed var(--accent);outline-offset:-2px;background:var(--accent-soft)}
+.caret{width:18px;height:18px;border:0;background:transparent;color:var(--muted);font-size:11px;flex:none;padding:0}
+.caret.leaf{visibility:hidden}
+.dot{width:9px;height:9px;border-radius:3px;flex:none;background:var(--muted)}
+.nname{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px}
+.ncount{font-size:12px;color:var(--muted);flex:none}
+.nact{display:none;gap:2px;flex:none}
+.node:hover .nact,.node.sel .nact{display:flex}
+.node:hover .ncount,.node.sel .ncount{display:none}
+.nact button{width:24px;height:24px;border:0;border-radius:6px;background:transparent;color:var(--muted);font-size:13px;padding:0}
+.nact button:hover{background:var(--panel);color:var(--ink)}
+.node input{flex:1;min-width:0;height:26px;border:1px solid var(--accent);border-radius:6px;padding:0 6px;background:var(--panel)}
+.special .node{font-weight:500}
+.rootdrop{margin:8px 6px;padding:8px;border:1px dashed var(--line);border-radius:8px;color:var(--muted);font-size:12.5px;text-align:center;display:none}
+.dragging .rootdrop{display:block}
+.rootdrop.drop{border-color:var(--accent);color:var(--accent)}
+.tags-side{display:flex;flex-wrap:wrap;gap:5px;padding:4px 6px}
+.tagbtn{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:2px 9px;font-size:12.5px}
+.tagbtn small{color:var(--muted)}
+.sep{height:1px;background:var(--line);margin:12px 6px}
+/* main */
+main{overflow:auto;position:relative}
+.crumbs{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:14px 20px 0;font-size:14px;color:var(--muted)}
+.crumbs button{border:0;background:transparent;color:var(--muted);padding:2px 4px;border-radius:6px}
+.crumbs button:hover{color:var(--ink);background:var(--chip)}
+.crumbs b{color:var(--ink);font:600 18px Georgia,serif}
+.crumbs .cnt{margin-left:6px}
+.subcats{display:flex;gap:8px;flex-wrap:wrap;padding:10px 20px 0}
+.subcat{display:flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:6px 12px;font-size:14px;box-shadow:var(--shadow)}
+.subcat small{color:var(--muted)}
+.grid{columns:5 220px;column-gap:14px;padding:16px 20px 120px}
+.card{break-inside:avoid;margin:0 0 14px;background:var(--panel);border-radius:14px;overflow:hidden;box-shadow:var(--shadow);cursor:pointer;position:relative;transition:transform .12s ease}
+.card:hover{transform:translateY(-2px)}
+.card:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.card.picked{outline:3px solid var(--accent);outline-offset:-3px}
+.check{position:absolute;top:8px;left:8px;width:24px;height:24px;border-radius:7px;background:rgba(255,255,255,.9);border:2px solid rgba(0,0,0,.25);display:none;place-items:center;color:#fff;font-size:15px;z-index:2}
+.selmode .check{display:grid}
+.card.picked .check{background:var(--accent);border-color:var(--accent)}
+.thumb{position:relative;background:var(--chip)}
+.thumb img{display:block;width:100%;height:auto;min-height:110px;object-fit:cover}
+.badge{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.6);color:#fff;font-size:12px;padding:3px 8px;border-radius:999px}
+.meta{padding:9px 12px 11px}
+.who{display:flex;justify-content:space-between;gap:8px;font-size:13px}
+.who b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.who span{color:var(--muted);flex:none}
+.cap{margin:5px 0 0;font-size:13px;color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.ctags{display:flex;gap:4px;flex-wrap:wrap;margin-top:7px}
+.ctag{font-size:11.5px;background:var(--chip);border-radius:6px;padding:2px 7px;display:inline-flex;align-items:center;gap:5px}
+.ctag i{width:7px;height:7px;border-radius:2px;display:inline-block}
+.ctag.user{background:transparent;border:1px solid var(--line)}
+.missing{display:grid;place-items:center;aspect-ratio:1;color:var(--muted);font-size:13px}
+.empty{text-align:center;color:var(--muted);padding:80px 20px}
+/* bulk bar */
+.bulk{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:var(--ink);color:var(--bg);border-radius:14px;padding:8px 10px 8px 16px;display:flex;gap:8px;align-items:center;box-shadow:0 10px 30px rgba(0,0,0,.25);z-index:15;flex-wrap:wrap;max-width:calc(100vw - 24px)}
+.bulk .btn{background:transparent;color:var(--bg);border-color:rgba(255,255,255,.25);height:32px}
+.bulk .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+/* dialogs */
+dialog.modal{border:0;border-radius:16px;padding:0;background:var(--panel);color:var(--ink);box-shadow:0 20px 60px rgba(0,0,0,.3);width:min(460px,calc(100vw - 24px))}
+dialog.modal::backdrop{background:rgba(20,15,10,.45)}
+.mh{padding:18px 20px 8px;font:600 18px Georgia,serif}
+.mb{padding:4px 20px 12px;font-size:14px}
+.mf{display:flex;gap:8px;justify-content:flex-end;padding:12px 20px 18px;flex-wrap:wrap}
+.picklist{max-height:50vh;overflow:auto;border:1px solid var(--line);border-radius:10px;margin-top:10px}
+.picklist button{display:flex;gap:8px;align-items:center;width:100%;text-align:left;border:0;border-bottom:1px solid var(--line);background:transparent;padding:8px 12px;font-size:14px}
+.picklist button:last-child{border-bottom:0}
+.picklist button:hover,.picklist button.hl{background:var(--chip)}
+.picklist .path{color:var(--muted);font-size:12px}
+.field{width:100%;height:36px;border:1px solid var(--line);border-radius:9px;padding:0 10px;background:var(--bg)}
+.colors{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.colors button{width:24px;height:24px;border-radius:7px;border:2px solid transparent}
+.colors button[aria-pressed=true]{border-color:var(--ink)}
+/* lightbox */
+dialog.lb{border:0;padding:0;max-width:none;max-height:none;width:100vw;height:100vh;background:var(--overlay);color:#fff}
+dialog.lb::backdrop{background:transparent}
+.lbg{display:grid;grid-template-columns:1fr 400px;height:100%}
+.stage{position:relative;display:grid;place-items:center;min-height:0;padding:24px}
+#media{width:100%;height:100%;display:grid;place-items:center;min-height:0}
+.stage img,.stage video{max-width:100%;max-height:calc(100vh - 48px);object-fit:contain;border-radius:6px}
+.nav{position:absolute;top:50%;transform:translateY(-50%);width:44px;height:44px;border-radius:50%;border:0;background:rgba(255,255,255,.15);color:#fff;font-size:22px}
+.nav:hover{background:rgba(255,255,255,.28)}
+.nav.prev{left:16px}.nav.next{right:16px}
+.dots{position:absolute;bottom:12px;left:0;right:0;display:flex;justify-content:center;gap:6px}
+.dots i{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.35)}
+.dots i.on{background:#fff}
+.close{position:absolute;top:14px;left:14px;width:40px;height:40px;border-radius:50%;border:0;background:rgba(255,255,255,.15);color:#fff;font-size:20px;z-index:2}
+.lside{background:var(--panel);color:var(--ink);overflow:auto;padding:20px;display:flex;flex-direction:column;gap:14px}
+.lside h2{margin:0;font:600 19px/1.2 Georgia,serif}
+.lside .sub{color:var(--muted);font-size:13px}
+.lside h3{margin:0 0 6px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.cchip{display:inline-flex;align-items:center;gap:6px;background:var(--chip);border-radius:8px;padding:4px 6px 4px 9px;font-size:13px}
+.cchip i{width:8px;height:8px;border-radius:2px}
+.cchip button{border:0;background:transparent;color:var(--muted);width:20px;height:20px;border-radius:5px;padding:0}
+.cchip button:hover{background:var(--panel);color:var(--danger)}
+.sugg{display:inline-flex;align-items:center;gap:6px;border:1px dashed var(--accent);color:var(--ink);background:transparent;border-radius:8px;padding:4px 9px;font-size:13px}
+.sugg:hover{background:var(--accent-soft)}
+textarea.note{width:100%;min-height:70px;border:1px solid var(--line);border-radius:9px;padding:8px 10px;background:var(--bg);resize:vertical}
+.full{white-space:pre-wrap;font-size:14px;line-height:1.55;overflow-wrap:anywhere}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.postnav{display:flex;gap:8px;margin-top:auto;padding-top:10px;border-top:1px solid var(--line)}
+.postnav .btn{flex:1;justify-content:center}
+.fname{font-size:12px;color:var(--muted);word-break:break-all}
+.addsec{border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:12px}
+.addsec h4{margin:0 0 8px;font-size:14px}
+.addsec .hint{font-size:12px;color:var(--muted);margin:6px 0 0}
+.dropz{border:2px dashed var(--line);border-radius:10px;padding:14px;text-align:center;color:var(--muted);cursor:pointer}
+.dropz.on{border-color:var(--accent);background:var(--accent-soft)}
+.flist{max-height:140px;overflow:auto;font-size:13px;margin-top:8px}
+.flist div{display:flex;justify-content:space-between;gap:8px;padding:2px 0;border-bottom:1px solid var(--line)}
+.radios{display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;font-size:13px}
+.qlist{font-size:12px;max-height:110px;overflow:auto;margin-top:6px}
+.qlist div{display:flex;justify-content:space-between;gap:6px;padding:2px 0;border-bottom:1px solid var(--line);word-break:break-all}
+.qlist button{border:0;background:none;color:var(--danger);cursor:pointer}
+body.filedrag::after{content:'Dosyaları buraya bırak → kataloğa ekle';position:fixed;inset:12px;border:3px dashed var(--accent);border-radius:18px;background:rgba(181,101,29,.12);display:grid;place-items:center;font-size:20px;font-weight:600;color:var(--accent);z-index:40;pointer-events:none}
+.toast{position:fixed;left:50%;top:16px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:10px;font-size:14px;z-index:50;box-shadow:var(--shadow)}
+.sidetoggle{display:none}
+@media (max-width:900px){
+  .app{grid-template-columns:1fr}
+  aside.side{position:fixed;inset:0 25% 0 0;z-index:30;transform:translateX(-105%);transition:transform .2s;box-shadow:var(--shadow)}
+  .app.sideopen aside.side{transform:none}
+  .sidetoggle{display:inline-flex}
+  .grid{columns:2 150px;column-gap:10px;padding:12px}
+  .lbg{grid-template-columns:1fr;grid-template-rows:58vh auto;overflow:auto}
+  .stage img,.stage video{max-height:54vh}
+}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+<header>
+  <button class="btn sidetoggle" id="sideToggle" aria-label="Kategoriler">☰</button>
+  <h1>Görsel Katalog</h1>
+  <label class="search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    <input id="q" type="search" placeholder="Ara: açıklama, hesap, not, etiket, kategori…" autocomplete="off"></label>
+  <div class="seg" id="type" role="group" aria-label="Tür"><button data-v="" aria-pressed="true">Tümü</button><button data-v="image">Foto</button><button data-v="carousel">Carousel</button><button data-v="video">Video</button></div>
+  <select id="acc" aria-label="Kaydeden hesap"></select>
+  <select id="year" aria-label="Yıl"></select>
+  <select id="sort" aria-label="Sıralama"><option value="new">Yeniden eskiye</option><option value="old">Eskiden yeniye</option><option value="saved">Kaydetme sırası</option><option value="user">Hesaba göre</option></select>
+  <button class="btn" id="addBtn" title="Bilgisayardan görsel/video ekle veya Instagram bağlantısı kaydet">＋ Ekle</button>
+  <button class="btn" id="selBtn" title="Birden fazla gönderi seçip toplu kategori ata">☑ Seç</button>
+  <button class="btn" id="undoBtn" title="Geri al (Ctrl+Z)" disabled>↶ Geri al</button>
+  <span class="status" id="status"></span>
+  <button class="btn primary" id="saveBtn" title="OneDrive’daki katalog.json’a kaydet (Ctrl+S)">💾 Kaydet</button>
+  <div class="menuwrap"><button class="btn" id="menuBtn" aria-haspopup="true">⋯</button>
+    <div class="menu" id="menu" hidden>
+      <button data-a="open">📂 katalog.json aç / içe aktar…</button>
+      <button data-a="reload" id="mReload">🔄 OneDrive'dan yenile</button>
+      <button data-a="saveas">⬇ Bir kopyasını indir</button>
+      <button data-a="csv">📄 Excel için CSV dışa aktar</button>
+      <button data-a="history">🕘 Otomatik yedekler…</button>
+      <button data-a="reset">↺ Instagram koleksiyonlarına sıfırla…</button>
+    </div>
+  </div>
+  <input type="file" id="fileIn" accept=".json,application/json" hidden>
+</header>
+
+<aside class="side" id="side">
+  <ul class="tree special" id="special"></ul>
+  <div class="sep"></div>
+  <div class="sideh"><b>Kategoriler</b><button class="btn sm" id="addRoot" title="Yeni ana kategori">＋ Ana kategori</button></div>
+  <ul class="tree" id="tree"></ul>
+  <div class="rootdrop" id="rootdrop">Buraya bırak → ana kategori yap</div>
+  <div class="sep"></div>
+  <div class="sideh"><b>Etiketlerim</b></div>
+  <div class="tags-side" id="tagside"></div>
+</aside>
+
+<main id="main">
+  <div class="crumbs" id="crumbs"></div>
+  <div class="subcats" id="subcats"></div>
+  <div class="grid" id="grid"></div>
+  <div class="empty" id="empty" hidden>Bu görünümde gönderi yok.</div>
+  <div id="sentinel" style="height:1px"></div>
+</main>
+</div>
+
+<div class="bulk" id="bulk" hidden>
+  <span id="bulkN"></span>
+  <button class="btn primary" id="bAdd">＋ Kategoriye ekle</button>
+  <button class="btn" id="bMove">➜ Taşı</button>
+  <button class="btn" id="bRemove">Bu kategoriden çıkar</button>
+  <button class="btn" id="bTag"># Etiket</button>
+  <button class="btn" id="bAll">Tümünü seç</button>
+  <button class="btn" id="bClear">✕</button>
+</div>
+
+<!-- picker -->
+<dialog class="modal" id="pick">
+  <div class="mh" id="pickTitle">Kategori seç</div>
+  <div class="mb"><input class="field" id="pickQ" placeholder="Kategori ara veya yeni ad yaz…" autocomplete="off"><div class="picklist" id="pickList"></div></div>
+  <div class="mf"><button class="btn" value="cancel" id="pickCancel">Vazgeç</button></div>
+</dialog>
+<!-- generic confirm / prompt -->
+<dialog class="modal" id="ask">
+  <div class="mh" id="askT"></div>
+  <div class="mb" id="askB"></div>
+  <div class="mf" id="askF"></div>
+</dialog>
+
+<dialog class="modal" id="addDlg" style="width:min(560px,calc(100vw - 24px))">
+  <div class="mh">İçerik ekle</div>
+  <div class="mb">
+    <div class="addsec" id="addFileSec">
+      <h4>Bilgisayarımdan görsel / video</h4>
+      <div class="dropz" id="addDrop">Dosyaları buraya sürükle veya <b>tıklayıp seç</b></div>
+      <input type="file" id="addFiles" multiple accept="image/*,video/*" hidden>
+      <div class="flist" id="addList"></div>
+      <div class="radios" id="addModeWrap" hidden>
+        <label><input type="radio" name="addMode" value="sep" checked> Her dosya ayrı gönderi</label>
+        <label><input type="radio" name="addMode" value="car"> Hepsi tek gönderi (carousel)</label>
+      </div>
+      <textarea class="note" id="addCap" placeholder="Açıklama (isteğe bağlı) — aramada da bulunur" style="margin-top:8px;min-height:56px"></textarea>
+      <div class="radios"><span>Kategori:</span><b id="addCatName">—</b><button class="btn sm" id="addCatBtn">Seç…</button><button class="btn sm" id="addCatClr" hidden>✕</button></div>
+      <p class="hint">Dosyalar arşivdeki <b>media/eklenen</b> klasörüne <b>kopyalanır</b>; asılları yerinde kalır. Hiçbir dosyanın üzerine yazılmaz.</p>
+    </div>
+    <div class="addsec" id="addFileOff" hidden><p class="hint" style="margin:0">Bilgisayardan dosya ekleme yalnızca bilgisayardaki katalogda (katalog.html) yapılabilir. Instagram bağlantılarını buradan da kaydedebilirsin.</p></div>
+    <div class="addsec">
+      <h4>Instagram bağlantısı (indirilecekler listesi)</h4>
+      <textarea class="note" id="addLinks" placeholder="Her satıra bir bağlantı, örn. https://www.instagram.com/reel/…" style="min-height:56px"></textarea>
+      <p class="hint">Bağlantılar kataloğa “indirilecek” olarak kaydedilir. Claude'a “indirilecekleri indir” demen yeterli; seçtiğin kategoriye eklenir.</p>
+      <div class="qlist" id="addQ"></div>
+    </div>
+  </div>
+  <div class="mf"><button class="btn" id="addCancel">Kapat</button><button class="btn primary" id="addGo">Ekle</button></div>
+</dialog>
+
+<dialog class="lb" id="lb" aria-label="Gönderi">
+  <div class="lbg">
+    <div class="stage" id="stage">
+      <button class="close" id="close" aria-label="Kapat">✕</button>
+      <button class="nav prev" id="prev" aria-label="Önceki görsel">‹</button>
+      <div id="media"></div>
+      <button class="nav next" id="next" aria-label="Sonraki görsel">›</button>
+      <div class="dots" id="dots"></div>
+    </div>
+    <div class="lside">
+      <div><h2 id="lbUser"></h2><div class="sub" id="lbDate"></div></div>
+      <section><h3>Kategoriler</h3><div class="chips" id="lbCats"></div></section>
+      <section id="lbSugWrap"><h3>Önerilen kategoriler</h3><div class="chips" id="lbSug"></div></section>
+      <section><h3>Etiketler</h3><div class="chips" id="lbTags"></div>
+        <input class="field" id="tagIn" placeholder="Etiket ekle, Enter'a bas (örn. ceviz, raf)" style="margin-top:8px"></section>
+      <section><h3>Notum</h3><textarea class="note" id="lbNote" placeholder="Bu gönderiyle ilgili notun…"></textarea></section>
+      <div class="row"><a class="btn primary sm" id="lbLink" target="_blank" rel="noopener">Instagram'da aç ↗</a><a class="btn sm" id="lbFile" target="_blank">Dosyayı aç</a><button class="btn sm" id="lbDel" hidden>Katalogdan kaldır</button></div>
+      <div class="fname" id="lbName"></div>
+      <section><h3>Açıklama</h3><div class="full" id="lbCap"></div></section>
+      <div class="sub" id="lbIg"></div>
+      <div class="postnav"><button class="btn" id="pPrev">← Önceki</button><button class="btn" id="pNext">Sonraki →</button></div>
+    </div>
+  </div>
+</dialog>
+
+<style>
+#boot{position:fixed;inset:0;z-index:50;background:var(--bg);display:grid;place-items:center;padding:16px}
+#boot .box{width:min(420px,100%);background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:26px 22px;box-shadow:var(--shadow);text-align:center}
+#boot h2{font:600 24px/1.2 Georgia,"Times New Roman",serif;margin:0 0 6px}
+#boot p{color:var(--muted);margin:8px 0}
+#boot .go{margin-top:14px;border:0;background:var(--accent);color:var(--accent-ink);border-radius:10px;padding:11px 18px;font-weight:600;width:100%}
+#boot .bar{height:6px;background:var(--chip);border-radius:6px;overflow:hidden;margin:14px 0 4px}
+#boot .bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .25s}
+#boot details{margin-top:16px;text-align:left;color:var(--muted);font-size:13px}
+#boot input{width:100%;margin-top:6px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+#boot .err{color:var(--danger);white-space:pre-wrap;text-align:left;font-size:13px}
+.cloudnote{font-size:12px;color:var(--muted)}
+</style>
+<div id="boot"><div class="box">
+  <h2>Görsel Katalog</h2>
+  <p id="bootMsg">Hazırlanıyor…</p>
+  <div class="bar" id="bootBar" hidden><i></i></div>
+  <p class="err" id="bootErr" hidden></p>
+  <button class="go" id="bootLogin" hidden>Microsoft hesabımla giriş yap</button>
+  <details><summary>Ayarlar</summary>
+    <label>OneDrive klasörü (OneDrive kökünden itibaren)<input id="bootFolder"></label>
+    <button class="go" id="bootSaveFolder" style="margin-top:10px">Kaydet ve yeniden yükle</button>
+    <button class="go" id="bootLogout" style="margin-top:8px;background:var(--chip);color:var(--ink)">Bu cihazda oturumu kapat</button>
+  </details>
+</div></div>
+<script>
+/* ===== OneDrive bağlantısı: giriş (PKCE), Graph, dosya listesi ===== */
+(()=>{
+const CLIENT_ID='a6af8a6d-ae2c-4426-8441-82cd0f4331ac';
+const DEF_FOLDER='Dropbox Backup 28.06.2026/6-UB/instagram saved, from claude 10.10.26/tum gonderiler';
+const SCOPES='Files.ReadWrite User.Read offline_access';
+const AUTH='https://login.microsoftonline.com/consumers/oauth2/v2.0';
+const G='https://graph.microsoft.com/v1.0';
+const REDIRECT=location.origin+location.pathname.replace(/index\.html$/,'');
+const $b=s=>document.getElementById(s);
+const ls={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch{return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}},del(k){try{localStorage.removeItem(k)}catch{}}};
+const FOLDER=(ls.get('igweb.folder',DEF_FOLDER)||DEF_FOLDER).replace(/^\/+|\/+$/g,'');
+const encPath=p=>p.split('/').map(encodeURIComponent).join('/');
+const FP=encPath(FOLDER);
+const msg=(t,pct)=>{$b('bootMsg').textContent=t; if(pct!=null){$b('bootBar').hidden=false; $b('bootBar').firstElementChild.style.width=Math.round(pct*100)+'%';}};
+const fail=t=>{$b('bootErr').hidden=false; $b('bootErr').textContent=t; $b('bootBar').hidden=true;};
+$b('bootFolder').value=FOLDER;
+$b('bootSaveFolder').onclick=()=>{ls.set('igweb.folder',$b('bootFolder').value.trim()||DEF_FOLDER); location.reload();};
+$b('bootLogout').onclick=()=>{ls.del('igweb.tok'); location.href=AUTH+'/logout?post_logout_redirect_uri='+encodeURIComponent(REDIRECT);};
+
+/* --- PKCE --- */
+const b64u=buf=>btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+const rnd=n=>b64u(crypto.getRandomValues(new Uint8Array(n)));
+async function login(prompt){
+  const v=rnd(48), st=rnd(16); sessionStorage.setItem('igweb.pkce',JSON.stringify({v,st}));
+  const ch=b64u(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(v)));
+  const q=new URLSearchParams({client_id:CLIENT_ID,response_type:'code',redirect_uri:REDIRECT,scope:SCOPES,code_challenge:ch,code_challenge_method:'S256',state:st,response_mode:'query'});
+  if(prompt) q.set('prompt',prompt);
+  location.href=AUTH+'/authorize?'+q;
+}
+async function tokenReq(body){
+  const r=await fetch(AUTH+'/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({client_id:CLIENT_ID,scope:SCOPES,...body})});
+  const j=await r.json(); if(!r.ok) throw new Error(j.error_description||j.error||('token '+r.status));
+  const t={a:j.access_token,e:Date.now()+(j.expires_in-90)*1000,r:j.refresh_token||ls.get('igweb.tok',{}).r}; ls.set('igweb.tok',t); return t;
+}
+let tok=ls.get('igweb.tok',null);
+async function token(force){
+  if(tok&&!force&&tok.e>Date.now()) return tok.a;
+  if(tok&&tok.r){ try{ tok=await tokenReq({grant_type:'refresh_token',refresh_token:tok.r}); return tok.a; }catch(e){ console.warn(e); } }
+  throw Object.assign(new Error('login'),{login:true});
+}
+async function graph(path,opt={},retry=true){
+  const url=path.startsWith('http')?path:G+path;
+  const r=await fetch(url,{...opt,headers:{...(opt.headers||{}),Authorization:'Bearer '+await token()}});
+  if(r.status===401&&retry){ await token(true); return graph(path,opt,false); }
+  if(r.status===429||r.status===503){ await new Promise(s=>setTimeout(s,(+r.headers.get('Retry-After')||3)*1000)); return graph(path,opt,retry); }
+  return r;
+}
+/* --- dosya listesi: göreli yol -> {id, th, dl, t} --- */
+const MAP={};
+async function list(rel,onPage){
+  const base=`/me/drive/root:/${FP}/${encPath(rel)}:/children?$top=1000`;
+  const tries=[base+'&$select=id,name,file,@microsoft.graph.downloadUrl&$expand=thumbnails($select=large)', base+'&$expand=thumbnails'];
+  let url=null;
+  for(const u of tries){ const r=await graph(u); if(r.ok){ url=u; await take(await r.json()); break; } if(r.status===404) return; if(r.status!==400) throw new Error(rel+' listelenemedi ('+r.status+')'); }
+  async function take(j){ const t=Date.now();
+    for(const it of j.value||[]){ if(!it.file) continue; const th=it.thumbnails?.[0]?.large?.url||'';
+      MAP[rel+'/'+it.name]={id:it.id,th,dl:it['@microsoft.graph.downloadUrl']||'',t}; }
+    onPage&&onPage(); if(j['@odata.nextLink']){ const r=await graph(j['@odata.nextLink']); if(!r.ok) throw new Error(rel+' sayfası alınamadı ('+r.status+')'); await take(await r.json()); } }
+}
+async function full(rel){ const e=MAP[rel]; if(!e) return '';
+  if(e.dl&&Date.now()-e.t<45*60e3) return e.dl;
+  const r=await graph(`/me/drive/items/${e.id}?$select=id,@microsoft.graph.downloadUrl`); if(!r.ok) return '';
+  const j=await r.json(); e.dl=j['@microsoft.graph.downloadUrl']||''; e.t=Date.now(); return e.dl; }
+/* --- küçük IndexedDB önbelleği (büyük veri dosyası için) --- */
+const idbp=()=>new Promise((res,rej)=>{const q=indexedDB.open('igweb',1);q.onupgradeneeded=()=>q.result.createObjectStore('c');q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)});
+async function cget(k){try{const d=await idbp();return await new Promise(r=>{const q=d.transaction('c').objectStore('c').get(k);q.onsuccess=()=>r(q.result);q.onerror=()=>r(null)})}catch{return null}}
+async function cset(k,v){try{const d=await idbp();d.transaction('c','readwrite').objectStore('c').put(v,k)}catch{}}
+async function item(name){ const r=await graph(`/me/drive/root:/${FP}/${encPath(name)}?$select=id,eTag,cTag,size,lastModifiedDateTime,@microsoft.graph.downloadUrl`); if(r.status===404) return null; if(!r.ok) throw new Error(name+' okunamadı ('+r.status+')'); return r.json(); }
+async function getText(it){ const r=await fetch(it['@microsoft.graph.downloadUrl']); if(!r.ok) throw new Error('indirme '+r.status); return r.text(); }
+
+/* --- katalog.json kaydetme --- */
+let ETAG=null;
+async function putCatalog(text,force){
+  const h={'Content-Type':'application/json'}; if(ETAG&&!force) h['If-Match']=ETAG;
+  const r=await graph(`/me/drive/root:/${FP}/katalog.json:/content`,{method:'PUT',headers:h,body:text});
+  if(r.status===412) return {conflict:true};
+  if(!r.ok) throw new Error('Kaydedilemedi ('+r.status+')');
+  const j=await r.json(); ETAG=j.eTag; return {ok:true};
+}
+async function fetchCatalog(){ const it=await item('katalog.json'); if(!it) return null; const d=JSON.parse(await getText(it)); ETAG=it.eTag; return d; }
+
+window.__G={full,putCatalog,fetchCatalog,MAP,folder:FOLDER,
+  th:rel=>MAP[rel]?.th||''};
+
+/* --- açılış --- */
+(async()=>{
+  try{
+    if(CLIENT_ID.startsWith('__')) return fail('Bu sayfa henüz bir Microsoft uygulama kimliğiyle (Client ID) ayarlanmadı.');
+    const qs=new URLSearchParams(location.search);
+    if(qs.get('code')||qs.get('error')){
+      const pk=JSON.parse(sessionStorage.getItem('igweb.pkce')||'{}'); history.replaceState(null,'',REDIRECT);
+      if(qs.get('error')){ $b('bootLogin').hidden=false; msg('Devam etmek için giriş yap.'); if(qs.get('error')!=='login_required'&&qs.get('error')!=='interaction_required') fail(qs.get('error_description')||qs.get('error')); return; }
+      if(qs.get('state')!==pk.st) throw new Error('Giriş doğrulanamadı, tekrar dene.');
+      msg('Giriş yapılıyor…'); tok=await tokenReq({grant_type:'authorization_code',code:qs.get('code'),redirect_uri:REDIRECT,code_verifier:pk.v});
+    }
+    try{ await token(); }catch(e){ if(e.login){ $b('bootLogin').hidden=false; msg('Arşivin OneDrive hesabında. Görmek için giriş yap.'); return; } throw e; }
+
+    msg('Katalog verisi okunuyor…',.05);
+    const vi=await item('katalog_veri.json'); if(!vi) throw new Error(`“${FOLDER}/katalog_veri.json” OneDrive'da bulunamadı.\nKlasör adı farklıysa aşağıdaki Ayarlar'dan düzelt. Yükleme sürüyorsa biraz sonra tekrar dene.`);
+    let veri=await cget('veri'); if(!veri||veri.tag!==vi.cTag){ msg('Katalog verisi indiriliyor ('+(vi.size/1e6).toFixed(1)+' MB)…',.1); veri={tag:vi.cTag,d:JSON.parse(await getText(vi))}; cset('veri',veri); }
+    const total=veri.d.files||9000; let n=0;
+    const tick=()=>{ n=Object.keys(MAP).length; msg(`Dosyalar listeleniyor… ${n.toLocaleString('tr-TR')} / ${total.toLocaleString('tr-TR')}`,.15+.75*Math.min(1,n/total)); };
+    await Promise.all([list('media',tick), list('media/_kapak',tick), list('media/eklenen',tick)]);
+    msg('Düzenlemeler okunuyor…',.95);
+    const remote=await fetchCatalog();
+    const KEY='igkatalog.v1'; const local=ls.get(KEY,null), dirty=ls.get('igkatalog.dirty',false);
+    let note='';
+    if(remote&&remote.nodes){ const r={nodes:remote.nodes,assign:remote.assign,meta:remote.meta||{},seeds:remote.seeds,custom:remote.custom||{},queue:remote.queue||[],savedAt:remote.savedAt,updated:remote.updated};
+      if(!local||!dirty){ ls.set(KEY,r); ls.set('igkatalog.dirty',false); }
+      else if((remote.savedAt||'')>(local.savedAt||'')){ ETAG='"eski"'; note='Bu cihazda kaydedilmemiş değişiklikler var, OneDrive\'da da daha yeni bir sürüm var. 💾 Kaydet\'e basınca hangisinin kalacağını soracağım.'; } }
+    window.__D={data:veri.d.data,seeds:veri.d.seeds,note};
+    $b('boot').remove(); window.__start();
+  }catch(e){ console.error(e); fail(String(e.message||e)); $b('bootLogin').hidden=!!tok; }
+})();
+$b('bootLogin').onclick=()=>login('select_account');
+})();
+</script>
+
+<script>
+window.__start=function(){
+const DATA = window.__D.data;
+const SEEDS = window.__D.seeds;
+let ACCS = [...new Set(DATA.map(p=>p.a))];
+const ACC_LABEL = {eklenen:'Bilgisayardan eklenenler'};
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const enc = p => encodeURI(p);
+const isVid = p => /\.(mp4|mov|m4v|webm)$/i.test(p);
+const TH = rel => window.__G.th(rel); const BLANK='data:image/gif;base64,R0lGODlhAQABAAAAACw=';
+const coll = new Intl.Collator('tr',{sensitivity:'base',numeric:true});
+const low = s => s.toLocaleLowerCase('tr');
+const typeLabel = {image:'Fotoğraf', video:'Video', carousel:'Carousel'};
+const fmtDate = t => t ? new Date(t+'T00:00:00').toLocaleDateString('tr-TR',{day:'numeric',month:'long',year:'numeric'}) : '';
+const COLORS = ['#b5651d','#8a5a2b','#c0392b','#d35400','#c9a227','#6b8e23','#2e7d32','#00897b','#1e88e5','#3949ab','#8e24aa','#d81b60','#6d6d6d'];
+const BY = {}; DATA.forEach((p,i)=>{p.i=i; p.y=p.t.slice(0,4); BY[p.c]=p;});
+const LS = {get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch{return d}}, set(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch{return false}}};
+const KEY='igkatalog.v1', HKEY='igkatalog.history', UKEY='igkatalog.ui';
+function toast(m){const t=document.createElement('div');t.className='toast';t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),2200)}
+
+/* ---------- catalog state ---------- */
+function valid(c){return c&&typeof c==='object'&&c.nodes&&c.assign&&c.meta}
+const fresh=()=>({nodes:{},assign:{},meta:{},seeds:[]});
+function mergeSeeds(c){ // adds collections/assignments of accounts not yet in this catalog; never touches existing edits
+  if(!c.seeds) c.seeds=['nonamewoodart']; const added=[];
+  for(const acc of Object.keys(SEEDS)){ if(c.seeds.includes(acc)) continue; const s=SEEDS[acc]; const tag=s.label||acc;
+    const rootNames=new Set(Object.values(c.nodes).filter(n=>!n.parent).map(n=>n.name.toLocaleLowerCase('tr')));
+    for(const id in s.nodes){ if(c.nodes[id]) continue; const n={...s.nodes[id]}; if(!n.parent&&rootNames.has(n.name.toLocaleLowerCase('tr'))) n.name+=` (${tag})`; c.nodes[id]=n; }
+    for(const k in s.assign){ const add=s.assign[k].filter(id=>c.nodes[id]); if(add.length) c.assign[k]=[...new Set([...(c.assign[k]||[]),...add])]; }
+    c.seeds.push(acc); added.push(tag); }
+  return added; }
+let cat = LS.get(KEY,null); let firstRun=!valid(cat);
+if(firstRun) cat = fresh();
+const mergedNow = mergeSeeds(cat);
+const ui = Object.assign({open:{}, sel:'', type:'', sort:'new', q:'', acc:'', year:''}, LS.get(UKEY,{}));
+let undoStack=[], dirtyFile = LS.get('igkatalog.dirty', false);
+function snapshot(){undoStack.push(JSON.stringify(cat)); if(undoStack.length>60) undoStack.shift(); $('#undoBtn').disabled=false;}
+let saveT, staleTab=false; // staleTab: another tab changed the catalog after this one → never overwrite it with this tab's older copy
+function changed(){
+  cat.updated=new Date().toISOString(); dirtyFile=true; LS.set('igkatalog.dirty',true);
+  clearTimeout(saveT); staleTab=false; saveT=setTimeout(()=>{ if(!LS.set(KEY,cat)) toast('Tarayıcı belleğine yazılamadı — lütfen 💾 Kaydet kullan'); autoHistory(); },300);
+  index(); renderTree(); renderView(); updateStatus();
+}
+let lastHist=0;
+function autoHistory(){ const now=Date.now(); if(now-lastHist<5*60e3) return; lastHist=now;
+  const h=LS.get(HKEY,[]); h.unshift({t:new Date().toISOString(),d:cat}); while(h.length>10) h.pop();
+  if(!LS.set(HKEY,h)){h.splice(3); LS.set(HKEY,h);} }
+function undo(){ if(!undoStack.length) return; cat=JSON.parse(undoStack.pop()); $('#undoBtn').disabled=!undoStack.length; changed(); toast('Geri alındı'); }
+function updateStatus(){ const s=$('#status'); s.textContent = dirtyFile ? '● Dosyaya kaydedilmedi' : (cat.savedAt?'✓ Kaydedildi '+new Date(cat.savedAt).toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'}):''); s.className='status'+(dirtyFile?' dirty':''); }
+const saveUI=()=>LS.set(UKEY,{open:ui.open,sel:ui.sel,type:ui.type,sort:ui.sort,q:ui.q,acc:ui.acc,year:ui.year});
+
+/* ---------- tree helpers ---------- */
+const N = id => cat.nodes[id];
+const kids = id => Object.values(cat.nodes).filter(n=>(n.parent||'')===(id||'')).sort((a,b)=>coll.compare(a.name,b.name));
+function desc(id){const out=[id];for(let i=0;i<out.length;i++) for(const n of Object.values(cat.nodes)) if(n.parent===out[i]) out.push(n.id);return out;}
+function pathOf(id){const p=[];let n=N(id);while(n){p.unshift(n);n=N(n.parent);}return p;}
+const pathStr = id => pathOf(id).map(n=>n.name).join(' › ');
+const color = id => { let n=N(id); while(n&&!n.color) n=N(n.parent); return n?.color||'#9b8b7c'; };
+const newId = () => 'n'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const assigned = c => (cat.assign[c]||[]).filter(id=>N(id));
+const note = c => cat.meta[c]||{};
+
+// derived index: node -> set of posts (direct), counts incl. descendants
+let direct={}, total={}, uncategorized=0, tagCount={};
+function syncCustom(){ // posts added from this computer live in cat.custom (saved in katalog.json)
+  for(let i=DATA.length-1;i>=0;i--) if(DATA[i].custom){ delete BY[DATA[i].c]; DATA.splice(i,1); }
+  for(const k in (cat.custom||{})){ const e=cat.custom[k]; const p={...e,custom:true,ig:e.ig||[],i:DATA.length,y:(e.t||'').slice(0,4)}; DATA.push(p); BY[p.c]=p; }
+  const accs=[...new Set(DATA.map(p=>p.a))]; if(accs.join()!==ACCS.join()){ ACCS=accs; fillAcc(); } fillYear(); }
+function fillAcc(){ $('#acc').innerHTML='<option value="">Tüm hesaplar</option>'+ACCS.map(a=>`<option value="${a}">${esc(ACC_LABEL[a]||a)} (${DATA.filter(p=>p.a===a).length})</option>`).join(''); if(ui.acc&&!ACCS.includes(ui.acc)) ui.acc=''; $('#acc').value=ui.acc; $('#acc').hidden=ACCS.length<2; }
+function fillYear(){ const yc={}; DATA.forEach(p=>{ if(p.y) yc[p.y]=(yc[p.y]||0)+1; }); const ys=Object.keys(yc).sort().reverse();
+  const h='<option value="">Tüm yıllar</option>'+ys.map(y=>`<option value="${y}">${y} (${yc[y]})</option>`).join(''); if($('#year').innerHTML!==h) $('#year').innerHTML=h;
+  if(ui.year&&!yc[ui.year]) ui.year=''; $('#year').value=ui.year; $('#year').title='Gönderinin paylaşıldığı (eklenenlerde dosyanın) yılı'; }
+function index(){
+  syncCustom();
+  direct={}; for(const id in cat.nodes) direct[id]=new Set();
+  uncategorized=0; tagCount={};
+  for(const p of DATA){ const a=assigned(p.c); if(!a.length) uncategorized++; a.forEach(id=>direct[id].add(p.c));
+    (note(p.c).tags||[]).forEach(t=>tagCount[t]=(tagCount[t]||0)+1);
+    p.s = low([p.u,p.cap,(note(p.c).note||''),(note(p.c).tags||[]).join(' '),a.map(pathStr).join(' '),p.ig.join(' ')].join(' ')); }
+  total={}; for(const id in cat.nodes){const s=new Set(); desc(id).forEach(d=>direct[d].forEach(c=>s.add(c))); total[id]=s.size;}
+}
+
+/* ---------- sidebar ---------- */
+function renderTree(){
+  $('#special').innerHTML = [['', '🗂 Tüm gönderiler', DATA.length], ['__none','📥 Kategorisiz', uncategorized], ['__noted','📝 Notlu / etiketli', DATA.filter(p=>{const m=note(p.c);return m.note||(m.tags&&m.tags.length)}).length]]
+    .map(([v,l,n])=>`<li><div class="node ${ui.sel===v?'sel':''}" data-sp="${v}"><span class="caret leaf"></span><span class="nname">${l}</span><span class="ncount" style="display:block">${n}</span></div></li>`).join('');
+  const build = pid => kids(pid).map(n=>{ const ch=kids(n.id).length, open=ui.open[n.id];
+    return `<li><div class="node ${ui.sel===n.id?'sel':''}" data-id="${n.id}" draggable="true">
+      <button class="caret ${ch?'':'leaf'}" data-act="toggle" aria-label="Aç/kapat">${open?'▾':'▸'}</button>
+      <span class="dot" style="background:${color(n.id)}"></span>
+      <span class="nname" title="${esc(pathStr(n.id))}">${esc(n.name)}</span><span class="ncount">${total[n.id]||0}</span>
+      <span class="nact"><button data-act="add" title="Alt kategori ekle">＋</button><button data-act="ren" title="Yeniden adlandır">✎</button><button data-act="more" title="Diğer">⋯</button></span>
+    </div>${ch&&open?`<ul>${build(n.id)}</ul>`:''}</li>`}).join('');
+  $('#tree').innerHTML = build('') || '<li class="sub" style="padding:6px;color:var(--muted);font-size:13px">Henüz kategori yok.</li>';
+  const tags=Object.entries(tagCount).sort((a,b)=>b[1]-a[1]||coll.compare(a[0],b[0]));
+  $('#tagside').innerHTML = tags.length? tags.map(([t,n])=>`<button class="tagbtn" data-tag="${esc(t)}">#${esc(t)} <small>${n}</small></button>`).join('') : '<span style="color:var(--muted);font-size:12.5px">Gönderi detayında etiket ekleyebilirsin.</span>';
+}
+$('#special').addEventListener('click',e=>{const n=e.target.closest('.node'); if(n){select(n.dataset.sp)}});
+$('#tagside').addEventListener('click',e=>{const b=e.target.closest('[data-tag]'); if(b){ui.q='#'+b.dataset.tag; $('#q').value=ui.q; select('');}});
+$('#tree').addEventListener('click',e=>{
+  const row=e.target.closest('.node'); if(!row||row.querySelector('input')) return; const id=row.dataset.id; const act=e.target.closest('[data-act]')?.dataset.act;
+  if(act==='toggle'){ui.open[id]=!ui.open[id]; saveUI(); renderTree(); return;}
+  if(act==='add') return addChild(id);
+  if(act==='ren') return rename(id);
+  if(act==='more') return nodeMenu(id);
+  select(id);
+});
+$('#tree').addEventListener('dblclick',e=>{const row=e.target.closest('.node'); if(row&&!e.target.closest('[data-act]')) rename(row.dataset.id)});
+function select(v){ ui.sel=v; subsOpen=false; saveUI(); if(v&&N(v)) pathOf(v).slice(0,-1).forEach(n=>ui.open[n.id]=true); renderTree(); renderView(); $('#app').classList.remove('sideopen'); $('#main').scrollTop=0; }
+
+function inlineEdit(id, initial, done){
+  renderTree(); const row=document.querySelector(`.node[data-id="${id}"]`); if(!row) return;
+  const nm=row.querySelector('.nname'); const inp=document.createElement('input'); inp.value=initial; nm.replaceWith(inp); row.querySelector('.nact').style.display='none';
+  row.draggable=false; inp.focus(); inp.select(); let fin=false;
+  const end=ok=>{ if(fin) return; fin=true; const v=inp.value.trim(); done(ok&&v?v:null); };
+  inp.addEventListener('keydown',e=>{ if(e.key==='Enter') end(true); if(e.key==='Escape') end(false); e.stopPropagation(); });
+  inp.addEventListener('blur',()=>end(true));
+}
+function rename(id){ inlineEdit(id, N(id).name, v=>{ if(v&&v!==N(id).name){ snapshot(); N(id).name=v; changed(); } else renderTree(); }); }
+function addChild(pid){
+  const id=newId(); snapshot(); cat.nodes[id]={id,name:'Yeni kategori',parent:pid||null};
+  if(pid) ui.open[pid]=true; index();
+  inlineEdit(id,'Yeni kategori',v=>{ if(!v){ delete cat.nodes[id]; undoStack.pop(); $('#undoBtn').disabled=!undoStack.length; index(); renderTree(); return;} N(id).name=v; changed(); });
+}
+$('#addRoot').onclick=()=>addChild(null);
+
+function ask({title,body,buttons}){ return new Promise(res=>{ const d=$('#ask'); $('#askT').textContent=title; $('#askB').innerHTML=body||'';
+  $('#askF').innerHTML=buttons.map((b,i)=>`<button class="btn ${b.cls||''}" data-i="${i}">${b.label}</button>`).join('');
+  $('#askF').onclick=e=>{const b=e.target.closest('[data-i]'); if(!b) return; d.close(); res(buttons[+b.dataset.i].v);};
+  d.onclose=()=>{ if(!d.open) res(undefined); }; d.showModal(); }); }
+
+async function nodeMenu(id){
+  const n=N(id);
+  const v = await ask({title:esc(pathStr(id)), body:`<div style="margin-bottom:6px">Renk:</div><div class="colors" id="colPick">${['',...COLORS].map(c=>`<button style="background:${c||'var(--chip)'}" data-c="${c}" aria-pressed="${(n.color||'')===c}" title="${c||'Üstten al'}"></button>`).join('')}</div>`,
+    buttons:[{label:'＋ Alt kategori',v:'add'},{label:'✎ Adını değiştir',v:'ren'},{label:'⇪ Başka yere taşı',v:'move'},{label:'🗑 Sil',v:'del',cls:''},{label:'Kapat',v:null,cls:'primary'}]});
+  if(v==='add') addChild(id); else if(v==='ren') rename(id); else if(v==='move') moveNode(id); else if(v==='del') delNode(id);
+}
+$('#askB').addEventListener('click',e=>{const b=e.target.closest('#colPick [data-c]'); if(!b||!currentMenuNode) return; snapshot(); N(currentMenuNode).color=b.dataset.c||undefined; document.querySelectorAll('#colPick button').forEach(x=>x.setAttribute('aria-pressed',x===b)); changed();});
+let currentMenuNode=null; const _nm=nodeMenu; nodeMenu=id=>{currentMenuNode=id; return _nm(id).finally(()=>currentMenuNode=null)};
+
+async function delNode(id){
+  const n=N(id), d=desc(id), sub=d.length-1, posts=total[id];
+  const v=await ask({title:`“${esc(n.name)}” silinsin mi?`, body:`${sub?`<b>${sub}</b> alt kategori ve `:''}<b>${posts}</b> gönderi ataması etkilenecek. Gönderilerin kendisi silinmez.`,
+    buttons:[{label:'Vazgeç',v:null},...(n.parent||sub?[{label:n.parent?'Gönderileri üst kategoriye aktar':'Alt kategorileri ana seviyeye çıkar',v:'up'}]:[]),{label:'Sil',v:'del',cls:'primary'}]});
+  if(!v) return; snapshot();
+  if(v==='up'){
+    kids(id).forEach(k=>k.parent=n.parent||null);
+    if(n.parent) for(const c in cat.assign){ if(cat.assign[c].includes(id)){ cat.assign[c]=[...new Set(cat.assign[c].map(x=>x===id?n.parent:x))]; } }
+    delete cat.nodes[id];
+  } else { d.forEach(x=>delete cat.nodes[x]); }
+  for(const c in cat.assign){ cat.assign[c]=cat.assign[c].filter(x=>cat.nodes[x]); if(!cat.assign[c].length) delete cat.assign[c]; }
+  if(!N(ui.sel)&&ui.sel&&!ui.sel.startsWith('__')) ui.sel='';
+  changed(); toast('Silindi — geri almak için ↶');
+}
+function reparent(id,newParent){
+  if(newParent && desc(id).includes(newParent)) return toast('Bir kategori kendi alt kategorisinin içine taşınamaz');
+  if((N(id).parent||null)===(newParent||null)) return;
+  snapshot(); N(id).parent=newParent||null; if(newParent) ui.open[newParent]=true; changed(); toast(`“${N(id).name}” taşındı`);
+}
+async function moveNode(id){ const t=await pickNode({title:`“${N(id).name}” nereye taşınsın?`, allowRoot:true, exclude:desc(id), noCreate:true}); if(t!==undefined) reparent(id,t); }
+
+/* ---------- drag & drop ---------- */
+let drag=null;
+$('#tree').addEventListener('dragstart',e=>{const r=e.target.closest('.node[data-id]'); if(!r) return; drag={type:'node',id:r.dataset.id}; e.dataTransfer.effectAllowed='move'; e.dataTransfer.setData('text/plain','node'); document.body.classList.add('dragging');});
+$('#grid').addEventListener('dragstart',e=>{const c=e.target.closest('.card'); if(!c) return; const code=c.dataset.c; const codes=picked.has(code)?[...picked]:[code]; drag={type:'posts',codes}; e.dataTransfer.effectAllowed='copyMove'; e.dataTransfer.setData('text/plain',codes.join(','));});
+document.addEventListener('dragend',()=>{drag=null; document.body.classList.remove('dragging'); document.querySelectorAll('.drop').forEach(x=>x.classList.remove('drop'));});
+function overTarget(e){ return e.target.closest('#tree .node[data-id], #special .node[data-sp="__none"], #rootdrop'); }
+document.addEventListener('dragover',e=>{ if(!drag) return; const t=overTarget(e); document.querySelectorAll('.drop').forEach(x=>x!==t&&x.classList.remove('drop')); if(!t) return;
+  if(drag.type==='node' && t.dataset.sp) return; if(drag.type==='posts' && t.id==='rootdrop') return; e.preventDefault(); t.classList.add('drop'); });
+document.addEventListener('drop',e=>{ if(!drag) return; const t=overTarget(e); if(!t) return; e.preventDefault();
+  if(drag.type==='node'){ reparent(drag.id, t.id==='rootdrop'?null:t.dataset.id); }
+  else if(t.dataset.sp==='__none'){ removeFrom(drag.codes, null); }
+  else { const move = e.shiftKey || e.altKey; assignTo(drag.codes, t.dataset.id, move); }
+  drag=null; document.body.classList.remove('dragging'); });
+
+/* ---------- assignments ---------- */
+const curNode = () => (ui.sel&&N(ui.sel))?ui.sel:null;
+function assignTo(codes,id,move){
+  snapshot(); const from=curNode();
+  codes.forEach(c=>{ let a=assigned(c); if(move&&from) a=a.filter(x=>!desc(from).includes(x)); if(!a.includes(id)) a.push(id); cat.assign[c]=a; });
+  changed(); toast(`${codes.length} gönderi → ${pathStr(id)}${move&&from?' (taşındı)':''}`);
+}
+function removeFrom(codes,id){ // id null = remove all categories
+  snapshot(); const rm = id? desc(id) : null;
+  codes.forEach(c=>{ const a=assigned(c).filter(x=>rm?!rm.includes(x):false); if(a.length) cat.assign[c]=a; else delete cat.assign[c]; });
+  changed(); toast(id?`${codes.length} gönderi “${N(id).name}” dışına çıkarıldı`:`${codes.length} gönderi kategorisiz yapıldı`);
+}
+
+/* ---------- picker ---------- */
+function pickNode({title,allowRoot=false,exclude=[],noCreate=false}){ return new Promise(res=>{
+  const d=$('#pick'); $('#pickTitle').textContent=title; const q=$('#pickQ'); q.value=''; let hl=0, items=[];
+  const all=()=>{ const out=[]; const walk=(pid,dep)=>kids(pid).forEach(n=>{ if(!exclude.includes(n.id)){out.push(n); walk(n.id,dep+1);} }); walk('',0); return out; };
+  const draw=()=>{ const s=low(q.value.trim()); items=[];
+    if(allowRoot&&!s) items.push({root:true});
+    all().filter(n=>!s||low(pathStr(n.id)).includes(s)).forEach(n=>items.push({id:n.id}));
+    if(s&&!noCreate) items.push({create:q.value.trim(), parent:null});
+    if(s&&!noCreate&&curNode()) items.push({create:q.value.trim(), parent:curNode()});
+    hl=Math.min(hl,items.length-1);
+    $('#pickList').innerHTML=items.map((it,i)=>`<button data-i="${i}" class="${i===hl?'hl':''}">${it.root?'⬆ <b>Ana seviye</b>':it.create?`＋ Yeni: <b>${esc(it.create)}</b> <span class="path">${it.parent?'('+esc(pathStr(it.parent))+' altında)':'(ana kategori)'}</span>`:`<span class="dot" style="background:${color(it.id)}"></span><span>${esc(N(it.id).name)}</span> <span class="path">${pathOf(it.id).length>1?esc(pathOf(it.id).slice(0,-1).map(n=>n.name).join(' › ')):''}</span> <span class="path" style="margin-left:auto">${total[it.id]||0}</span>`}</button>`).join('') || '<div style="padding:12px;color:var(--muted)">Kategori yok — bir ad yazıp yeni oluştur.</div>'; };
+  let done=false; const fin=v=>{ if(done) return; done=true; res(v); };
+  const choose=i=>{ const it=items[i]; if(!it) return; if(it.root) fin(null); else if(it.create){ const id=newId(); cat.nodes[id]={id,name:it.create,parent:it.parent}; index(); fin(id);} else fin(it.id); d.close(); };
+  q.oninput=()=>{hl=0;draw()}; q.onkeydown=e=>{ if(e.key==='ArrowDown'){hl=Math.min(hl+1,items.length-1);draw();e.preventDefault()} if(e.key==='ArrowUp'){hl=Math.max(hl-1,0);draw();e.preventDefault()} if(e.key==='Enter'){choose(hl);e.preventDefault()} };
+  $('#pickList').onclick=e=>{const b=e.target.closest('[data-i]'); if(b) choose(+b.dataset.i)};
+  $('#pickCancel').onclick=()=>d.close();
+  d.onclose=()=>{ if(!d.open) fin(undefined); };
+  draw(); d.showModal(); q.focus(); }); }
+
+/* ---------- main view ---------- */
+let list=[], shown=0; const PAGE=48; const picked=new Set(); let selMode=false;
+function renderView(){
+  const sel=ui.sel; const q=low(ui.q.trim()).split(/\s+/).filter(Boolean);
+  let base;
+  if(sel==='__none') base=DATA.filter(p=>!assigned(p.c).length);
+  else if(sel==='__noted') base=DATA.filter(p=>{const m=note(p.c);return m.note||(m.tags&&m.tags.length)});
+  else if(sel&&N(sel)){ const s=new Set(); desc(sel).forEach(d=>direct[d].forEach(c=>s.add(c))); base=DATA.filter(p=>s.has(p.c)); }
+  else base=DATA;
+  list=base.filter(p=>(!ui.type||p.m===ui.type)&&(!ui.acc||p.a===ui.acc)&&(!ui.year||p.y===ui.year)&&q.every(w=> w.startsWith('#') ? (note(p.c).tags||[]).some(t=>low(t)===w.slice(1)) : p.s.includes(w)));
+  if(ui.sort==='new') list.sort((a,b)=>b.t.localeCompare(a.t)); else if(ui.sort==='old') list.sort((a,b)=>a.t.localeCompare(b.t)); else if(ui.sort==='user') list.sort((a,b)=>coll.compare(a.u,b.u)||b.t.localeCompare(a.t)); else list.sort((a,b)=>a.i-b.i);
+  // crumbs
+  let cr='';
+  if(sel&&N(sel)) cr = `<button data-go="">Tümü</button>` + pathOf(sel).map((n,i,a)=>i<a.length-1?` › <button data-go="${n.id}">${esc(n.name)}</button>`:` › <b>${esc(n.name)}</b>`).join('');
+  else cr = `<b>${sel==='__none'?'Kategorisiz':sel==='__noted'?'Notlu / etiketli':'Tüm gönderiler'}</b>`;
+  $('#crumbs').innerHTML = cr + `<span class="cnt">${list.length} gönderi</span>` + (sel&&N(sel)?` <button class="btn sm" data-sub="${sel}" style="margin-left:8px">＋ Alt kategori</button> <button class="btn sm" data-ren="${sel}">✎ Adını değiştir</button>`:'');
+  const subs = sel&&N(sel)?kids(sel):(!sel?kids(''):[]);
+  const LIM=12, cut=subs.length>LIM+3&&!subsOpen; const shownSubs=cut?subs.slice(0,LIM):subs;
+  $('#subcats').innerHTML = shownSubs.map(n=>`<button class="subcat" data-go="${n.id}"><span class="dot" style="background:${color(n.id)}"></span>${esc(n.name)} <small>${total[n.id]||0}</small></button>`).join('')+(subs.length>LIM+3?`<button class="subcat" data-more="1"><b>${subsOpen?'Daha az göster':'+ '+(subs.length-LIM)+' kategori daha'}</b></button>`:'');
+  $('#grid').innerHTML=''; shown=0; $('#empty').hidden=list.length>0; more(); updateBulk();
+}
+$('#crumbs').addEventListener('click',e=>{const g=e.target.closest('[data-go]'); if(g) select(g.dataset.go); const s=e.target.closest('[data-sub]'); if(s) addChild(s.dataset.sub); const r=e.target.closest('[data-ren]'); if(r){ ui.open[N(r.dataset.ren).parent]=true; rename(r.dataset.ren);} });
+let subsOpen=false;
+$('#subcats').addEventListener('click',e=>{ if(e.target.closest('[data-more]')){ subsOpen=!subsOpen; renderView(); return; } const g=e.target.closest('[data-go]'); if(g) select(g.dataset.go)});
+function cardHTML(p){
+  const f=p.f[0]; const badge=p.f.length>1?`<span class="badge">▦ ${p.f.length}</span>`:(f&&isVid(f)?'<span class="badge">▶ Video</span>':'');
+  const th=f?(TH(f)||(p.pv?(p.pv.startsWith('data:')?p.pv:TH(p.pv)):'')):'';
+  const m=!f?'<div class="missing">Dosya yok</div>':th?`<img src="${th}" loading="lazy" alt="">`:`<div class="missing">${isVid(f)?'▶ Video':'Önizleme yok'}</div>`;
+  const a=assigned(p.c), mt=note(p.c);
+  const tags=a.slice(0,3).map(id=>`<span class="ctag"><i style="background:${color(id)}"></i>${esc(N(id).name)}</span>`).join('')+(a.length>3?`<span class="ctag">+${a.length-3}</span>`:'')+(mt.tags||[]).slice(0,3).map(t=>`<span class="ctag user">#${esc(t)}</span>`).join('')+(mt.note?'<span class="ctag user">📝</span>':'');
+  return `<span class="check">✓</span><div class="thumb">${m}${badge}</div><div class="meta"><div class="who"><b>@${esc(p.u)}</b><span>${ACCS.length>1&&p.a!==ACCS[0]?'◆ ':''}${p.y}</span></div>${p.cap?`<p class="cap">${esc(p.cap.slice(0,220))}</p>`:''}${tags?`<div class="ctags">${tags}</div>`:''}</div>`;
+}
+function more(){ const fr=document.createDocumentFragment();
+  list.slice(shown,shown+PAGE).forEach(p=>{const el=document.createElement('article'); el.className='card'+(picked.has(p.c)?' picked':''); el.tabIndex=0; el.draggable=true; el.dataset.c=p.c; el.innerHTML=cardHTML(p); fr.appendChild(el);});
+  shown+=PAGE; $('#grid').appendChild(fr);
+  $('#grid').querySelectorAll('img:not([data-e])').forEach(m=>{m.dataset.e=1;m.addEventListener('error',()=>{m.parentElement.querySelector('img')?.replaceWith(Object.assign(document.createElement('div'),{className:'missing',textContent:'Dosya bulunamadı'}))},{once:true})}); }
+new IntersectionObserver(e=>{if(e[0].isIntersecting&&shown<list.length) more()},{root:$('#main'),rootMargin:'1200px'}).observe($('#sentinel'));
+function refreshCard(c){ const el=document.querySelector(`.card[data-c="${c}"]`); if(el) el.innerHTML=cardHTML(BY[c]); }
+
+/* ---------- selection ---------- */
+let lastClick=null;
+$('#grid').addEventListener('click',e=>{ const c=e.target.closest('.card'); if(!c) return; const code=c.dataset.c;
+  if(selMode||e.ctrlKey||e.metaKey||e.shiftKey){ if(!selMode) toggleSel(true);
+    if(e.shiftKey&&lastClick){ const a=list.findIndex(p=>p.c===lastClick), b=list.findIndex(p=>p.c===code); const [s,t]=a<b?[a,b]:[b,a]; list.slice(s,t+1).forEach(p=>picked.add(p.c)); document.querySelectorAll('.card').forEach(x=>x.classList.toggle('picked',picked.has(x.dataset.c))); }
+    else { picked.has(code)?picked.delete(code):picked.add(code); c.classList.toggle('picked',picked.has(code)); }
+    lastClick=code; updateBulk(); return; }
+  openPost(code); });
+$('#grid').addEventListener('keydown',e=>{if(e.key==='Enter'){const c=e.target.closest('.card'); if(c) openPost(c.dataset.c)}});
+function toggleSel(on){ selMode=on??!selMode; $('#selBtn').classList.toggle('on',selMode); $('#grid').classList.toggle('selmode',selMode); if(!selMode){picked.clear(); document.querySelectorAll('.card.picked').forEach(x=>x.classList.remove('picked'));} updateBulk(); }
+$('#selBtn').onclick=()=>toggleSel();
+function updateBulk(){ const n=picked.size; $('#bulk').hidden=!selMode; $('#bulkN').textContent=n?`${n} seçili`:'Gönderilere tıklayarak seç (Shift ile aralık)';
+  ['#bAdd','#bMove','#bTag'].forEach(s=>$(s).disabled=!n); $('#bRemove').disabled=!n||!curNode(); $('#bMove').disabled=!n||!curNode(); }
+$('#bClear').onclick=()=>toggleSel(false);
+$('#bAll').onclick=()=>{ list.forEach(p=>picked.add(p.c)); document.querySelectorAll('.card').forEach(x=>x.classList.add('picked')); updateBulk(); };
+$('#bAdd').onclick=async()=>{ const id=await pickNode({title:`${picked.size} gönderiyi kategoriye ekle`}); if(id) assignTo([...picked],id,false); };
+$('#bMove').onclick=async()=>{ const id=await pickNode({title:`${picked.size} gönderiyi “${N(curNode()).name}” içinden taşı`}); if(id) { assignTo([...picked],id,true); picked.clear(); updateBulk(); } };
+$('#bRemove').onclick=()=>{ const n=curNode(); if(n){ removeFrom([...picked],n); picked.clear(); updateBulk(); } };
+$('#bTag').onclick=async()=>{ const v=await ask({title:`${picked.size} gönderiye etiket ekle`, body:'<input class="field" id="bulkTag" placeholder="etiket (virgülle birden fazla)">', buttons:[{label:'Vazgeç',v:null},{label:'Ekle',v:'ok',cls:'primary'}]});
+  const raw=document.getElementById('bulkTag')?.value; if(v!=='ok'||!raw) return; const tags=raw.split(',').map(s=>s.trim()).filter(Boolean); snapshot();
+  picked.forEach(c=>{ const m=cat.meta[c]||(cat.meta[c]={}); m.tags=[...new Set([...(m.tags||[]),...tags])]; }); changed(); toast('Etiketler eklendi'); };
+
+/* ---------- smart suggestions ---------- */
+const STOP=new Set('the and for with this that from your have will are you our was its sur les des une est pour avec dans bir ile için bu ve çok daha gibi olan veya ama şimdi kadar more just like what when about all can not but out new made make one how link bio'.split(' '));
+function toks(p){ const s=low(p.cap); const out=new Set();
+  (s.match(/#[\p{L}\p{N}_]+/gu)||[]).forEach(h=>out.add(h)); (s.match(/@[\w.]+/g)||[]).forEach(h=>out.add(h)); out.add('@'+low(p.u));
+  (s.replace(/[#@][\p{L}\p{N}_.]+/gu,' ').match(/[\p{L}]{4,}/gu)||[]).forEach(w=>{ if(!STOP.has(w)) out.add(w); }); p.ig.forEach(g=>out.add('ig:'+low(g))); return out; }
+let TOK=null, DF=null;
+function buildTok(){ TOK={}; DF={}; DATA.forEach(p=>{ TOK[p.c]=toks(p); TOK[p.c].forEach(t=>DF[t]=(DF[t]||0)+1); }); }
+function suggest(code){ if(!TOK) buildTok(); const mine=TOK[code], have=new Set(assigned(code).flatMap(id=>pathOf(id).map(n=>n.id))); const scores={}; const Nn=DATA.length;
+  for(const id in cat.nodes){ if(have.has(id)) continue; const members=[...direct[id]].filter(c=>c!==code); if(!members.length) continue;
+    const tf={}; members.forEach(c=>TOK[c].forEach(t=>tf[t]=(tf[t]||0)+1)); let sc=0;
+    mine.forEach(t=>{ if(tf[t]){ const w=Math.log(Nn/(DF[t]||1)); sc += w*(tf[t]/members.length) * (t.startsWith('@')?2.5:t.startsWith('ig:')?3:1); } });
+    const nm=low(N(id).name); mine.forEach(t=>{ const b=t.replace(/^[#@]|^ig:/,''); if(b.length>3&&(nm.includes(b)||b.includes(nm))) sc+=2; });
+    if(sc>0.8) scores[id]=sc; }
+  return Object.entries(scores).sort((a,b)=>b[1]-a[1]).slice(0,4).map(x=>x[0]); }
+
+/* ---------- lightbox ---------- */
+const lb=$('#lb'); let cur=-1, idx=0, curCode=null;
+function openPost(code){ cur=list.findIndex(p=>p.c===code); curCode=code; idx=0; renderLb(); if(!lb.open) lb.showModal(); }
+function renderLb(){ const p=BY[curCode]; const f=p.f[idx];
+  const th=f?(TH(f)||(p.pv&&!p.pv.startsWith('data:')?TH(p.pv):p.pv)||''):'';
+  $('#media').innerHTML=!f?'<div class="missing" style="width:300px">Dosya yok</div>':isVid(f)?`<video controls autoplay playsinline ${th?`poster="${th}"`:''}></video>`:`<img src="${th||BLANK}" alt="">`;
+  const el=$('#media').firstElementChild, want=curCode+'|'+idx;
+  if(f) window.__G.full(f).then(u=>{ if(curCode+'|'+idx!==want||!el.isConnected) return; if(!u){ if(!th) $('#media').innerHTML='<div class="missing" style="width:320px;color:#ddd;text-align:center">Dosya OneDrive\'da bulunamadı</div>'; return; } el.src=u; $('#lbFile').href=u; });
+  el?.addEventListener?.('error',()=>{$('#media').innerHTML=`<div class="missing" style="width:320px;color:#ddd;text-align:center">${f&&isVid(f)?'Video bu tarayıcıda oynatılamadı.<br>“Dosyayı aç” ile varsayılan oynatıcıda açabilirsin.':'Dosya bulunamadı'}</div>`});
+  $('#prev').hidden=$('#next').hidden=p.f.length<2; $('#dots').innerHTML=p.f.length>1?p.f.map((_,j)=>`<i class="${j===idx?'on':''}"></i>`).join(''):'';
+  $('#lbUser').textContent='@'+p.u; $('#lbDate').textContent=[fmtDate(p.t),typeLabel[p.m],p.f.length>1?`${idx+1}/${p.f.length}`:''].filter(Boolean).join(' · ');
+  renderLbMeta();
+  $('#lbLink').href='https://www.instagram.com/p/'+(p.sc||p.c)+'/'; $('#lbFile').href='#'; $('#lbName').textContent=f?f.split('/').pop():'';
+  $('#lbCap').textContent=p.cap||'(Açıklama yok)'; $('#lbIg').textContent=p.custom?('Bilgisayardan eklendi · '+new Date(p.added).toLocaleString('tr-TR')):('Kaydeden hesap: '+p.a+' · '+(p.ig.length?'Instagram koleksiyonu: '+p.ig.join(', '):'Instagram\'da koleksiyonsuz'));
+  $('#lbLink').hidden=!!p.custom; $('#lbDel').hidden=!p.custom;
+  $('#pPrev').disabled=cur<=0; $('#pNext').disabled=cur<0||cur>=list.length-1; }
+function renderLbMeta(){ const c=curCode, m=note(c);
+  $('#lbCats').innerHTML=assigned(c).map(id=>`<span class="cchip"><i style="background:${color(id)}"></i>${esc(pathStr(id))}<button data-rm="${id}" title="Kaldır">✕</button></span>`).join('')+`<button class="btn sm" id="lbAdd">＋ Kategori</button>`;
+  const sg=suggest(c); $('#lbSugWrap').hidden=!sg.length; $('#lbSug').innerHTML=sg.map(id=>`<button class="sugg" data-sg="${id}">＋ ${esc(pathStr(id))}</button>`).join('');
+  $('#lbTags').innerHTML=(m.tags||[]).map(t=>`<span class="cchip">#${esc(t)}<button data-rt="${esc(t)}" title="Kaldır">✕</button></span>`).join('')||'<span class="sub" style="color:var(--muted);font-size:13px">Etiket yok</span>';
+  if(document.activeElement!==$('#lbNote')) $('#lbNote').value=m.note||''; }
+$('#lbCats').addEventListener('click',async e=>{ const r=e.target.closest('[data-rm]'); if(r){ snapshot(); cat.assign[curCode]=assigned(curCode).filter(x=>x!==r.dataset.rm); if(!cat.assign[curCode].length) delete cat.assign[curCode]; changed(); renderLbMeta(); refreshCard(curCode); return; }
+  if(e.target.closest('#lbAdd')){ const id=await pickNode({title:'Kategoriye ekle'}); if(id){ snapshot(); const a=assigned(curCode); if(!a.includes(id)) a.push(id); cat.assign[curCode]=a; changed(); renderLbMeta(); } } });
+$('#lbSug').addEventListener('click',e=>{ const b=e.target.closest('[data-sg]'); if(!b) return; snapshot(); const a=assigned(curCode); a.push(b.dataset.sg); cat.assign[curCode]=a; changed(); renderLbMeta(); });
+$('#lbTags').addEventListener('click',e=>{ const b=e.target.closest('[data-rt]'); if(!b) return; snapshot(); const m=cat.meta[curCode]; m.tags=m.tags.filter(t=>t!==b.dataset.rt); cleanMeta(curCode); changed(); renderLbMeta(); });
+$('#tagIn').addEventListener('keydown',e=>{ if(e.key!=='Enter') return; const v=e.target.value.split(',').map(s=>s.trim().replace(/^#/,'')).filter(Boolean); if(!v.length) return; snapshot(); const m=cat.meta[curCode]||(cat.meta[curCode]={}); m.tags=[...new Set([...(m.tags||[]),...v])]; e.target.value=''; changed(); renderLbMeta(); });
+let noteT; $('#lbNote').addEventListener('input',e=>{ clearTimeout(noteT); const c=curCode, v=e.target.value; noteT=setTimeout(()=>{ snapshot(); const m=cat.meta[c]||(cat.meta[c]={}); m.note=v; cleanMeta(c); changed(); },500); });
+function cleanMeta(c){ const m=cat.meta[c]; if(!m) return; if(!m.note) delete m.note; if(m.tags&&!m.tags.length) delete m.tags; if(!Object.keys(m).length) delete cat.meta[c]; }
+const step=d=>{const n=BY[curCode].f.length; if(n>1){idx=(idx+d+n)%n; renderLb();}};
+const post=d=>{const n=cur+d; if(cur>=0&&n>=0&&n<list.length){cur=n; curCode=list[n].c; idx=0; renderLb();}};
+$('#prev').onclick=()=>step(-1); $('#next').onclick=()=>step(1); $('#pPrev').onclick=()=>post(-1); $('#pNext').onclick=()=>post(1); $('#close').onclick=()=>lb.close();
+lb.addEventListener('close',()=>{$('#media').innerHTML=''; if(curCode) refreshCard(curCode);});
+lb.addEventListener('keydown',e=>{ if(e.target.matches('input,textarea')) return;
+  if(e.key==='ArrowRight'){e.preventDefault(); BY[curCode].f.length>1?step(1):post(1);} if(e.key==='ArrowLeft'){e.preventDefault(); BY[curCode].f.length>1?step(-1):post(-1);}
+  if(e.key==='ArrowDown'||e.key==='PageDown'){e.preventDefault();post(1)} if(e.key==='ArrowUp'||e.key==='PageUp'){e.preventDefault();post(-1)} });
+$('#stage').addEventListener('click',e=>{if(e.target.id==='stage'||e.target.id==='media') lb.close()});
+
+/* ---------- add content (files from this computer / Instagram links) ---------- */
+const CAN_FILES = !!window.showDirectoryPicker && location.protocol==='file:';
+let addFiles=[], addTarget='';
+const isMediaFile=f=>/^(image|video)\//.test(f.type)||/\.(jpe?g|png|gif|webp|bmp|avif|mp4|mov|m4v|webm)$/i.test(f.name);
+const isVidFile=f=>f.type.startsWith('video')||/\.(mp4|mov|m4v|webm)$/i.test(f.name);
+async function idbGet(k){ try{const db=await idb(); return await new Promise(r=>{const q=db.transaction('h').objectStore('h').get(k); q.onsuccess=()=>r(q.result); q.onerror=()=>r(null);});}catch{return null} }
+async function idbSet(k,v){ try{const db=await idb(); db.transaction('h','readwrite').objectStore('h').put(v,k);}catch{} }
+async function archiveDir(){ // the folder that contains katalog.html and media/
+  let d=await idbGet('dir');
+  if(d){ let st=await d.queryPermission?.({mode:'readwrite'}); if(st!=='granted') st=await d.requestPermission?.({mode:'readwrite'}); if(st==='granted') return d; }
+  const ok=await ask({title:'Arşiv klasörünü seç',body:'Eklenen dosyaları arşive kopyalayabilmem için bir kereye mahsus <b>katalog.html</b>\'in bulunduğu <b>tum gonderiler</b> klasörünü seçmen gerekiyor.<br><br>Açılan pencerede o klasöre girip <b>Klasör seç</b>\'e, ardından <b>Değişikliklere izin ver</b>\'e bas.',buttons:[{label:'Vazgeç',v:null},{label:'Klasörü seç',v:1,cls:'primary'}]});
+  if(!ok) return null;
+  d=await showDirectoryPicker({id:'igarsiv',mode:'readwrite'});
+  try{ await d.getFileHandle('katalog.html'); await d.getDirectoryHandle('media'); }catch{ toast('Bu klasörde katalog.html / media yok — tum gonderiler klasörünü seç'); return null; }
+  await idbSet('dir',d); return d; }
+async function uniqueName(dir,name){ const dot=name.lastIndexOf('.'); const b=dot>0?name.slice(0,dot):name, x=dot>0?name.slice(dot):''; let n=name, i=2;
+  while(true){ try{ await dir.getFileHandle(n); n=`${b} (${i++})${x}`; }catch(e){ if(e.name==='NotFoundError') return n; n=`${b} (${i++})${x}`; if(i>500) throw e; } } }
+async function writeFile(dir,name,blob){ const n=await uniqueName(dir,name); const h=await dir.getFileHandle(n,{create:true}); const w=await h.createWritable(); await w.write(blob); await w.close(); return n; }
+function videoPoster(file){ return new Promise(res=>{ const v=document.createElement('video'); v.muted=true; v.preload='auto'; v.src=URL.createObjectURL(file);
+  const done=b=>{ URL.revokeObjectURL(v.src); res(b); }; const to=setTimeout(()=>done(null),8000);
+  v.onloadeddata=()=>{ v.currentTime=Math.min(1,(v.duration||2)/2); };
+  v.onseeked=()=>{ try{ const c=document.createElement('canvas'); const r=Math.min(1,720/Math.max(v.videoWidth,v.videoHeight)); c.width=v.videoWidth*r; c.height=v.videoHeight*r; c.getContext('2d').drawImage(v,0,0,c.width,c.height); c.toBlob(b=>{clearTimeout(to); done(b);},'image/jpeg',.85); }catch{ clearTimeout(to); done(null); } };
+  v.onerror=()=>{ clearTimeout(to); done(null); }; }); }
+const TRMAP={ç:'c',Ç:'C',ğ:'g',Ğ:'G',ı:'i',İ:'I',ö:'o',Ö:'O',ş:'s',Ş:'S',ü:'u',Ü:'U'};
+const safeName=s=>s.replace(/[çÇğĞıİöÖşŞüÜ]/g,c=>TRMAP[c]).normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Za-z0-9._ ()-]+/g,'_').replace(/\s+/g,' ').trim().slice(0,120)||'dosya';
+const ymd=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+function renderAdd(){
+  $('#addFileSec').hidden=!CAN_FILES; $('#addFileOff').hidden=CAN_FILES;
+  $('#addList').innerHTML=addFiles.map((f,i)=>`<div><span>${isVidFile(f)?'🎬':'🖼'} ${esc(f.name)}</span><span>${(f.size/1e6).toFixed(1)} MB <button class="btn sm" data-rmf="${i}">✕</button></span></div>`).join('');
+  $('#addModeWrap').hidden=addFiles.length<2;
+  $('#addCatName').textContent=addTarget&&N(addTarget)?pathStr(addTarget):'— (kategorisiz)'; $('#addCatClr').hidden=!addTarget;
+  const q=cat.queue||[]; $('#addQ').innerHTML=q.length?`<b>İndirilmeyi bekleyen: ${q.length}</b>`+q.map((x,i)=>`<div><span>${esc(x.url)}${x.target&&N(x.target)?' → '+esc(N(x.target).name):''}</span><button data-rmq="${i}" title="Listeden çıkar">✕</button></div>`).join(''):'';
+}
+function openAdd(files){ addFiles=files?[...files].filter(isMediaFile):[]; addTarget=ui.sel&&N(ui.sel)?ui.sel:''; $('#addCap').value=''; $('#addLinks').value=''; renderAdd(); if(!$('#addDlg').open) $('#addDlg').showModal(); }
+$('#addBtn').onclick=()=>openAdd();
+$('#addCancel').onclick=()=>$('#addDlg').close();
+$('#addDrop').onclick=()=>$('#addFiles').click();
+$('#addFiles').onchange=e=>{ addFiles.push(...[...e.target.files].filter(isMediaFile)); e.target.value=''; renderAdd(); };
+$('#addList').onclick=e=>{ const b=e.target.closest('[data-rmf]'); if(b){ addFiles.splice(+b.dataset.rmf,1); renderAdd(); } };
+$('#addQ').onclick=e=>{ const b=e.target.closest('[data-rmq]'); if(b){ snapshot(); cat.queue.splice(+b.dataset.rmq,1); changed(); renderAdd(); } };
+$('#addCatBtn').onclick=async()=>{ const id=await pickNode({title:'Eklenenler hangi kategoriye girsin?'}); if(id) addTarget=id; if(!$('#addDlg').open) $('#addDlg').showModal(); renderAdd(); };
+$('#addCatClr').onclick=()=>{ addTarget=''; renderAdd(); };
+['dragenter','dragover'].forEach(t=>$('#addDrop').addEventListener(t,e=>{ e.preventDefault(); $('#addDrop').classList.add('on'); }));
+$('#addDrop').addEventListener('dragleave',()=>$('#addDrop').classList.remove('on'));
+$('#addDrop').addEventListener('drop',e=>{ e.preventDefault(); e.stopPropagation(); $('#addDrop').classList.remove('on'); addFiles.push(...[...e.dataTransfer.files].filter(isMediaFile)); renderAdd(); });
+// drop files anywhere on the page
+const hasFiles=e=>[...(e.dataTransfer?.types||[])].includes('Files');
+document.addEventListener('dragover',e=>{ if(!drag&&hasFiles(e)&&CAN_FILES&&!$('#addDlg').open){ e.preventDefault(); document.body.classList.add('filedrag'); } });
+document.addEventListener('dragleave',e=>{ if(!e.relatedTarget) document.body.classList.remove('filedrag'); });
+document.addEventListener('drop',e=>{ document.body.classList.remove('filedrag'); if(!drag&&hasFiles(e)&&CAN_FILES&&!$('#addDlg').open){ e.preventDefault(); openAdd(e.dataTransfer.files); } });
+$('#addGo').onclick=async()=>{
+  const links=$('#addLinks').value.split(/\s+/).map(x=>x.trim()).filter(x=>/instagram\.com\/(p|reel|reels|tv)\//.test(x));
+  const bad=$('#addLinks').value.trim()&&!links.length;
+  if(!addFiles.length&&!links.length){ toast(bad?'Geçerli bir Instagram gönderi/reels bağlantısı bulunamadı':'Eklenecek dosya veya bağlantı yok'); return; }
+  const btn=$('#addGo'); btn.disabled=true; btn.textContent='Ekleniyor…';
+  try{
+    let added=0;
+    if(links.length){ cat.queue=cat.queue||[]; const have=new Set(cat.queue.map(x=>x.url)); for(const u of links){ const url=u.split('?')[0]; if(!have.has(url)){ cat.queue.push({url,added:new Date().toISOString(),target:addTarget||null}); have.add(url); } } }
+    if(addFiles.length){
+      const root=await archiveDir(); if(!root){ return; }
+      const media=await root.getDirectoryHandle('media'); const dir=await media.getDirectoryHandle('eklenen',{create:true});
+      const groups=($('input[name=addMode]:checked')?.value==='car'&&addFiles.length>1)?[addFiles]:addFiles.map(f=>[f]);
+      cat.custom=cat.custom||{}; const cap=$('#addCap').value.trim();
+      for(const g of groups){ const id='ek'+Date.now().toString(36)+Math.random().toString(36).slice(2,6); const d=new Date(g[0].lastModified||Date.now()); const pre=ymd(d).replace(/-/g,'');
+        const f=[]; for(const file of g){ btn.textContent=`Kopyalanıyor… ${file.name}`; const n=await writeFile(dir,`${pre}_${safeName(file.name)}`,file); f.push('media/eklenen/'+n); }
+        const vid=isVidFile(g[0]); let pv;
+        if(vid){ const b=await videoPoster(g[0]); if(b){ const n=await writeFile(dir,`${pre}_${id}_kapak.jpg`,b); pv='media/eklenen/'+n; } }
+        const key='ek:'+id; const e={c:key,a:'eklenen',u:'bilgisayarım',t:ymd(d),m:g.length>1?'carousel':(vid?'video':'image'),cap:cap||g.map(x=>x.name).join(', '),f,ig:[],src:'dosya',added:new Date().toISOString()}; if(pv) e.pv=pv;
+        if(!snapshot.done){ snapshot(); snapshot.done=true; }
+        cat.custom[key]=e; if(addTarget) cat.assign[key]=[addTarget]; added++; }
+    } else snapshot();
+    snapshot.done=false; changed(); $('#addDlg').close();
+    toast([added?`${added} gönderi eklendi`:'',links.length?`${links.length} bağlantı indirilecekler listesine eklendi`:''].filter(Boolean).join(' · ')+' — 💾 Kaydet\'i unutma');
+  }catch(err){ console.warn(err); if(err.name!=='AbortError') toast('Eklenemedi: '+(err.message||err)); }
+  finally{ btn.disabled=false; btn.textContent='Ekle'; snapshot.done=false; }
+};
+$('#lbDel').onclick=async()=>{ const p=BY[curCode]; if(!p?.custom) return;
+  const v=await ask({title:'Katalogdan kaldırılsın mı?',body:'Gönderi katalogdan çıkarılır. Dosya diskte (media/eklenen) kalır, silinmez. Geri al ile geri getirebilirsin.',buttons:[{label:'Vazgeç',v:null},{label:'Kaldır',v:1,cls:'primary'}]});
+  if(!v) return; snapshot(); delete cat.custom[p.c]; delete cat.assign[p.c]; delete cat.meta[p.c]; lb.close(); changed(); toast('Katalogdan kaldırıldı'); };
+
+/* ---------- file save / load ---------- */
+const idb=()=>new Promise((res,rej)=>{const r=indexedDB.open('igkatalog',1); r.onupgradeneeded=()=>r.result.createObjectStore('h'); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error);});
+async function getHandle(){ try{const db=await idb(); return await new Promise(r=>{const q=db.transaction('h').objectStore('h').get('file'); q.onsuccess=()=>r(q.result); q.onerror=()=>r(null);});}catch{return null} }
+async function setHandle(h){ try{const db=await idb(); db.transaction('h','readwrite').objectStore('h').put(h,'file');}catch{} }
+function payload(){ return JSON.stringify({...cat, savedAt:new Date().toISOString(), app:'igkatalog', posts:DATA.length}, null, 1); }
+async function saveFile(as){
+  if(as){ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([payload()],{type:'application/json'})); a.download='katalog.json'; a.click(); toast('Bir kopya indirildi'); return; }
+  const btn=$('#saveBtn'); btn.disabled=true; const prev=btn.textContent; btn.textContent='Kaydediliyor…';
+  try{
+    const stamp=new Date().toISOString(); const text=()=>JSON.stringify({...cat, savedAt:stamp, app:'igkatalog', posts:DATA.length}, null, 1);
+    let r=await window.__G.putCatalog(text());
+    if(r.conflict){
+      const v=await ask({title:'OneDrive\'da daha yeni bir sürüm var',body:'Katalog başka bir cihazdan kaydedilmiş. Ne yapalım?',buttons:[{label:'Vazgeç',v:null},{label:'OneDrive\'dakini yükle',v:'load'},{label:'Benimkiyle üzerine yaz',v:'over',cls:'primary'}]});
+      if(!v) return;
+      if(v==='load'){ const d=await window.__G.fetchCatalog(); snapshot(); cat={nodes:d.nodes,assign:d.assign,meta:d.meta||{},seeds:d.seeds,custom:d.custom||{},queue:d.queue||[],savedAt:d.savedAt,updated:d.updated}; mergeSeeds(cat); ui.sel=''; changed(); dirtyFile=false; LS.set('igkatalog.dirty',false); LS.set(KEY,cat); updateStatus(); toast('OneDrive\'daki sürüm yüklendi'); return; }
+      r=await window.__G.putCatalog(text(),true);
+    }
+    cat.savedAt=stamp; dirtyFile=false; LS.set('igkatalog.dirty',false); LS.set(KEY,cat); updateStatus(); toast('OneDrive\'a kaydedildi');
+  }catch(e){ console.warn(e); toast('Kaydedilemedi — internet bağlantısını kontrol edip tekrar dene'); }
+  finally{ btn.disabled=false; btn.textContent=prev; }
+}
+async function reloadSaved(){ try{ const d=await window.__G.fetchCatalog(); if(!d) return toast('OneDrive\'da henüz katalog.json yok');
+  if(dirtyFile){ const v=await ask({title:'Kaydedilmemiş değişiklikler var',body:'OneDrive\'daki sürüm yüklenirse bu değişiklikler kaybolur (Geri al ile dönebilirsin).',buttons:[{label:'Vazgeç',v:null},{label:'Yine de yükle',v:1,cls:'primary'}]}); if(!v) return; }
+  snapshot(); cat={nodes:d.nodes,assign:d.assign,meta:d.meta||{},seeds:d.seeds,custom:d.custom||{},queue:d.queue||[],savedAt:d.savedAt,updated:d.updated}; mergeSeeds(cat); ui.sel=''; changed(); dirtyFile=false; LS.set('igkatalog.dirty',false); LS.set(KEY,cat); updateStatus(); toast('OneDrive\'dan yenilendi'); }catch(e){ console.warn(e); toast('OneDrive okunamadı'); } }
+$('#saveBtn').onclick=()=>saveFile(false);
+document.addEventListener('keydown',e=>{ if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault(); saveFile(false);} if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'&&!e.target.matches('input,textarea')){e.preventDefault(); undo();} if(e.key==='Escape'&&selMode&&!document.querySelector('dialog[open]')) toggleSel(false); });
+$('#undoBtn').onclick=undo;
+$('#menuBtn').onclick=e=>{e.stopPropagation(); $('#menu').hidden=!$('#menu').hidden};
+document.addEventListener('click',()=>$('#menu').hidden=true);
+$('#menu').addEventListener('click',async e=>{ const a=e.target.closest('[data-a]')?.dataset.a; if(!a) return; $('#menu').hidden=true;
+  if(a==='open') $('#fileIn').click();
+  if(a==='reload') reloadSaved();
+  if(a==='saveas') saveFile(true);
+  if(a==='csv') exportCSV();
+  if(a==='history') showHistory();
+  if(a==='reset'){ const v=await ask({title:'Instagram koleksiyonlarına sıfırla?',body:'Tüm kategori düzenlemelerin, notların ve etiketlerin başlangıç durumuna döner. Bilgisayardan eklediğin gönderiler ve indirilecekler listesi korunur. (Geri al ile geri getirebilirsin.)',buttons:[{label:'Vazgeç',v:null},{label:'Sıfırla',v:1,cls:'primary'}]}); if(v){ snapshot(); const keep={custom:cat.custom||{},queue:cat.queue||[]}; cat=fresh(); Object.assign(cat,keep); mergeSeeds(cat); ui.sel=''; changed(); } }
+});
+$('#fileIn').onchange=async e=>{ const f=e.target.files[0]; if(!f) return; try{ const d=JSON.parse(await f.text()); if(!valid(d)) throw 0; snapshot(); cat={nodes:d.nodes,assign:d.assign,meta:d.meta,seeds:d.seeds,custom:d.custom||{},queue:d.queue||[],savedAt:d.savedAt,updated:d.updated}; const ad=mergeSeeds(cat); if(ad.length) toast('Yeni hesap koleksiyonları eklendi: '+ad.join(', ')); ui.sel=''; changed(); dirtyFile=false; LS.set('igkatalog.dirty',false); updateStatus(); toast('Katalog yüklendi: '+f.name);}catch{ toast('Bu dosya geçerli bir katalog değil'); } e.target.value=''; };
+async function showHistory(){ const h=LS.get(HKEY,[]); if(!h.length) return toast('Henüz otomatik yedek yok');
+  const v=await ask({title:'Otomatik yedekler',body:'Tarayıcının sakladığı son sürümler (en fazla 10, 5 dakikada bir):',buttons:[...h.map((x,i)=>({label:new Date(x.t).toLocaleString('tr-TR'),v:i})),{label:'Kapat',v:null,cls:'primary'}]});
+  if(v==null) return; snapshot(); cat=structuredClone(h[v].d); changed(); toast('Yedek geri yüklendi'); }
+function exportCSV(){ const rows=[['shortcode','url','kaydeden_hesap','hesap','tarih','tur','kategoriler','etiketler','not','instagram_koleksiyonu','dosyalar','aciklama']];
+  DATA.forEach(p=>{const m=note(p.c); rows.push([p.sc||p.c,'https://www.instagram.com/p/'+(p.sc||p.c)+'/',p.a,p.u,p.t,p.m,assigned(p.c).map(pathStr).join(' | '),(m.tags||[]).join(', '),m.note||'',p.ig.join(' | '),p.f.join(' | '),p.cap]);});
+  const csv='﻿'+rows.map(r=>r.map(x=>'"'+String(x??'').replace(/"/g,'""')+'"').join(';')).join('\r\n');
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download='katalog.csv'; a.click(); }
+
+/* ---------- header controls ---------- */
+let qT; $('#q').addEventListener('input',e=>{ui.q=e.target.value; clearTimeout(qT); qT=setTimeout(()=>{saveUI();renderView()},150)});
+$('#type').addEventListener('click',e=>{const b=e.target.closest('button'); if(!b) return; ui.type=b.dataset.v; document.querySelectorAll('#type button').forEach(x=>x.setAttribute('aria-pressed',x===b)); saveUI(); renderView();});
+$('#sort').onchange=e=>{ui.sort=e.target.value; saveUI(); renderView();};
+fillAcc();
+$('#acc').onchange=e=>{ui.acc=e.target.value; saveUI(); renderView();};
+fillYear();
+$('#year').onchange=e=>{ui.year=e.target.value; saveUI(); renderView();};
+$('#sideToggle').onclick=()=>$('#app').classList.toggle('sideopen');
+window.addEventListener('storage',e=>{ if(e.key!==KEY||!e.newValue) return; try{ const o=JSON.parse(e.newValue); if((o.updated||'')>(cat.updated||'')||(o.savedAt||'')>(cat.savedAt||'')){ staleTab=true; toast('Katalog başka bir sekmede değişti — bu sekmeyi yenile (F5)'); } }catch{} });
+window.addEventListener('beforeunload',e=>{ if(staleTab) return; const cur=LS.get(KEY,null); if(cur&&((cur.updated||'')>(cat.updated||'')||(cur.savedAt||'')>(cat.savedAt||''))) return; LS.set(KEY,cat); });
+
+/* ---------- init ---------- */
+$('#q').value=ui.q; $('#sort').value=ui.sort; document.querySelectorAll('#type button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.v===ui.type));
+if(ui.sel && !ui.sel.startsWith('__') && !N(ui.sel)) ui.sel='';
+index(); renderTree(); renderView(); updateStatus();
+if(window.__D.note) setTimeout(()=>toast(window.__D.note),600);
+if(firstRun){ LS.set(KEY,cat); }
+else if(mergedNow.length){ LS.set(KEY,cat); dirtyFile=true; LS.set('igkatalog.dirty',true); updateStatus(); setTimeout(()=>toast('Yeni koleksiyonlar eklendi: '+mergedNow.join(', ')+'. Mevcut düzenlemelerin korundu.'),600); }
+
+};
+</script>
+</body>
+</html>
