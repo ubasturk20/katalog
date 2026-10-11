@@ -382,22 +382,25 @@ async function list(rel,onPage){
   const base=`/me/drive/root:/${FP}/${encPath(rel)}:/children?$top=1000`;
   const tries=[base+'&$select=id,name,file,@microsoft.graph.downloadUrl&$expand=thumbnails($select=large)', base+'&$expand=thumbnails'];
   let url=null;
-  for(const u of tries){ const r=await graph(u); if(r.ok){ url=u; await take(await r.json()); break; } if(r.status===404) return; if(r.status!==400) throw new Error(rel+' listelenemedi ('+r.status+')'); }
+  for(const u of tries){ const r=await graph(u); if(r.ok){ const j=await r.json(); const files=(j.value||[]).filter(it=>it.file); if(u!==tries.at(-1)&&files.length&&!files.some(it=>it.thumbnails?.length)) continue; url=u; await take(j); break; } if(r.status===404) return; if(r.status!==400) throw new Error(rel+' listelenemedi ('+r.status+')'); }
   async function take(j){ const t=Date.now();
-    for(const it of j.value||[]){ if(!it.file) continue; const th=it.thumbnails?.[0]?.large?.url||'';
-      MAP[rel+'/'+it.name]={id:it.id,th,dl:it['@microsoft.graph.downloadUrl']||'',t}; }
+    for(const it of j.value||[]){ if(!it.file) continue; const th=it.thumbnails?.[0]?.large?.url||it.thumbnails?.[0]?.medium?.url||'';
+      const dl=it['@microsoft.graph.downloadUrl']||it['@content.downloadUrl']||'';
+      MAP[rel+'/'+it.name]={id:it.id,th,dl,t}; }
     onPage&&onPage(); if(j['@odata.nextLink']){ const r=await graph(j['@odata.nextLink']); if(!r.ok) throw new Error(rel+' sayfası alınamadı ('+r.status+')'); await take(await r.json()); } }
 }
 async function full(rel){ const e=MAP[rel]; if(!e) return '';
   if(e.dl&&Date.now()-e.t<45*60e3) return e.dl;
-  const r=await graph(`/me/drive/items/${e.id}?$select=id,@microsoft.graph.downloadUrl`); if(!r.ok) return '';
-  const j=await r.json(); e.dl=j['@microsoft.graph.downloadUrl']||''; e.t=Date.now(); return e.dl; }
+  try{ const r=await graph(`/me/drive/items/${e.id}`); if(r.ok){ const j=await r.json(); const u=j['@microsoft.graph.downloadUrl']||j['@content.downloadUrl']; if(u){ e.dl=u; e.t=Date.now(); return u; } } }catch(err){ console.warn(err); }
+  // fallback: stream the file through Graph and show it from memory
+  try{ const r=await graph(`/me/drive/items/${e.id}/content`); if(!r.ok) return ''; const u=URL.createObjectURL(await r.blob()); e.dl=u; e.t=Date.now()+1e12; return u; }catch(err){ console.warn(err); return ''; } }
 /* --- küçük IndexedDB önbelleği (büyük veri dosyası için) --- */
 const idbp=()=>new Promise((res,rej)=>{const q=indexedDB.open('igweb',1);q.onupgradeneeded=()=>q.result.createObjectStore('c');q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)});
 async function cget(k){try{const d=await idbp();return await new Promise(r=>{const q=d.transaction('c').objectStore('c').get(k);q.onsuccess=()=>r(q.result);q.onerror=()=>r(null)})}catch{return null}}
 async function cset(k,v){try{const d=await idbp();d.transaction('c','readwrite').objectStore('c').put(v,k)}catch{}}
-async function item(name){ const r=await graph(`/me/drive/root:/${FP}/${encPath(name)}?$select=id,eTag,cTag,size,lastModifiedDateTime,@microsoft.graph.downloadUrl`); if(r.status===404) return null; if(!r.ok) throw new Error(name+' okunamadı ('+r.status+')'); return r.json(); }
-async function getText(it){ const r=await fetch(it['@microsoft.graph.downloadUrl']); if(!r.ok) throw new Error('indirme '+r.status); return r.text(); }
+async function item(name){ const r=await graph(`/me/drive/root:/${FP}/${encPath(name)}`); if(r.status===404) return null; if(!r.ok) throw new Error(name+' okunamadı ('+r.status+')'); return r.json(); }
+async function getText(it){ const u=it['@microsoft.graph.downloadUrl']||it['@content.downloadUrl'];
+  const r=u?await fetch(u):await graph(`/me/drive/items/${it.id}/content`); if(!r.ok) throw new Error('indirme '+r.status); return r.text(); }
 
 /* --- katalog.json kaydetme --- */
 let ETAG=null;
