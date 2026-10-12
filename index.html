@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Görsel Katalog</title>
+<title>UB Medya Arsiv</title>
 <meta name="robots" content="noindex,nofollow">
 <meta name="referrer" content="no-referrer">
 <style>
@@ -82,7 +82,7 @@ main{overflow:auto;position:relative}
 .subcats{display:flex;gap:8px;flex-wrap:wrap;padding:10px 20px 0}
 .subcat{display:flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:6px 12px;font-size:14px;box-shadow:var(--shadow)}
 .subcat small{color:var(--muted)}
-.grid{columns:5 220px;column-gap:14px;padding:16px 20px 120px}
+.grid{columns:5;column-gap:12px;padding:16px 20px 120px}
 .card{break-inside:avoid;margin:0 0 14px;background:var(--panel);border-radius:14px;overflow:hidden;box-shadow:var(--shadow);cursor:pointer;position:relative;transition:transform .12s ease}
 .card:hover{transform:translateY(-2px)}
 .card:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
@@ -168,12 +168,34 @@ textarea.note{width:100%;min-height:70px;border:1px solid var(--line);border-rad
 body.filedrag::after{content:'Dosyaları buraya bırak → kataloğa ekle';position:fixed;inset:12px;border:3px dashed var(--accent);border-radius:18px;background:rgba(181,101,29,.12);display:grid;place-items:center;font-size:20px;font-weight:600;color:var(--accent);z-index:40;pointer-events:none}
 .toast{position:fixed;left:50%;top:16px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:10px;font-size:14px;z-index:50;box-shadow:var(--shadow)}
 .sidetoggle{display:none}
+.hctl{display:contents}
+#filtBtn{display:none}
+#media{touch-action:pan-y}
+.sidecount-trash{color:var(--danger)}
 @media (max-width:900px){
   .app{grid-template-columns:1fr}
   aside.side{position:fixed;inset:0 25% 0 0;z-index:30;transform:translateX(-105%);transition:transform .2s;box-shadow:var(--shadow)}
   .app.sideopen aside.side{transform:none}
   .sidetoggle{display:inline-flex}
-  .grid{columns:2 150px;column-gap:10px;padding:12px}
+  .grid{columns:3;column-gap:6px;padding:8px 8px 100px}
+  .card{margin:0 0 6px;border-radius:10px}
+  .card .meta{padding:5px 7px 6px}
+  .card .cap,.card .ctags,.card .who span{display:none}
+  .card .who{font-size:11px}
+  .badge{top:5px;right:5px;font-size:10px;padding:2px 6px}
+  .thumb img{min-height:80px}
+  header{flex-wrap:nowrap;position:relative;padding:8px 10px}
+  header h1{font-size:19px;flex:1;overflow:hidden;text-overflow:ellipsis}
+  #filtBtn{display:inline-flex}
+  .hctl{display:none;position:absolute;top:100%;left:0;right:0;z-index:25;background:var(--bg);border-bottom:1px solid var(--line);box-shadow:var(--shadow);padding:10px;gap:8px;flex-wrap:wrap}
+  header.open .hctl{display:flex}
+  .hctl .search{flex:1 1 100%}
+  .hctl select{max-width:none;flex:1 1 45%}
+  .app.hdrhide header{display:none}
+  .subcats{padding:8px 8px 0;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+  .subcats::-webkit-scrollbar{display:none}
+  .subcat{flex:none;padding:5px 10px;font-size:13px}
+  .crumbs{padding:8px 10px 0}
   .lbg{grid-template-columns:1fr;grid-template-rows:58vh auto;overflow:auto}
   .stage img,.stage video{max-height:54vh}
 }
@@ -183,11 +205,13 @@ body.filedrag::after{content:'Dosyaları buraya bırak → kataloğa ekle';posit
 <div class="app" id="app">
 <header>
   <button class="btn sidetoggle" id="sideToggle" aria-label="Kategoriler">☰</button>
-  <h1>Görsel Katalog</h1>
+  <h1>UB Medya Arsiv</h1>
+  <button class="btn" id="filtBtn" aria-expanded="false" title="Arama ve filtreler">⚙ Filtre<span id="filtDot" hidden style="color:var(--accent)"> ●</span></button>
+  <div class="hctl" id="hctl">
   <label class="search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
     <input id="q" type="search" placeholder="Ara: açıklama, hesap, not, etiket, kategori…" autocomplete="off"></label>
-  <div class="seg" id="type" role="group" aria-label="Tür"><button data-v="" aria-pressed="true">Tümü</button><button data-v="image">Foto</button><button data-v="carousel">Carousel</button><button data-v="video">Video</button></div>
-  <select id="acc" aria-label="Kaydeden hesap"></select>
+  <select id="type" aria-label="Tür"><option value="">Tüm türler</option><option value="image">Foto</option><option value="carousel">Carousel</option><option value="video">Video</option></select>
+  <select id="acc" aria-label="Kaydeden hesap" hidden></select>
   <select id="year" aria-label="Yıl"></select>
   <select id="sort" aria-label="Sıralama"><option value="new">Yeniden eskiye</option><option value="old">Eskiden yeniye</option><option value="saved">Kaydetme sırası</option><option value="user">Hesaba göre</option></select>
   <button class="btn" id="addBtn" title="Bilgisayardan görsel/video ekle veya Instagram bağlantısı kaydet">＋ Ekle</button>
@@ -206,6 +230,7 @@ body.filedrag::after{content:'Dosyaları buraya bırak → kataloğa ekle';posit
     </div>
   </div>
   <input type="file" id="fileIn" accept=".json,application/json" hidden>
+  </div>
 </header>
 
 <aside class="side" id="side">
@@ -235,6 +260,7 @@ body.filedrag::after{content:'Dosyaları buraya bırak → kataloğa ekle';posit
   <button class="btn" id="bRemove">Bu kategoriden çıkar</button>
   <button class="btn" id="bTag"># Etiket</button>
   <button class="btn" id="bAll">Tümünü seç</button>
+  <button class="btn" id="bDel">🗑 Sil</button>
   <button class="btn" id="bClear">✕</button>
 </div>
 
@@ -294,7 +320,7 @@ body.filedrag::after{content:'Dosyaları buraya bırak → kataloğa ekle';posit
       <section><h3>Etiketler</h3><div class="chips" id="lbTags"></div>
         <input class="field" id="tagIn" placeholder="Etiket ekle, Enter'a bas (örn. ceviz, raf)" style="margin-top:8px"></section>
       <section><h3>Notum</h3><textarea class="note" id="lbNote" placeholder="Bu gönderiyle ilgili notun…"></textarea></section>
-      <div class="row"><a class="btn primary sm" id="lbLink" target="_blank" rel="noopener">Instagram'da aç ↗</a><a class="btn sm" id="lbFile" target="_blank">Dosyayı aç</a><button class="btn sm" id="lbDel" hidden>Katalogdan kaldır</button></div>
+      <div class="row"><a class="btn primary sm" id="lbLink" target="_blank" rel="noopener">Instagram'da aç ↗</a><a class="btn sm" id="lbFile" target="_blank">Dosyayı aç</a><button class="btn sm" id="lbDel">🗑 Sil</button></div>
       <div class="fname" id="lbName"></div>
       <section><h3>Açıklama</h3><div class="full" id="lbCap"></div></section>
       <div class="sub" id="lbIg"></div>
@@ -317,7 +343,7 @@ body.filedrag::after{content:'Dosyaları buraya bırak → kataloğa ekle';posit
 .cloudnote{font-size:12px;color:var(--muted)}
 </style>
 <div id="boot"><div class="box">
-  <h2>Görsel Katalog</h2>
+  <h2>UB Medya Arsiv</h2>
   <p id="bootMsg">Hazırlanıyor…</p>
   <div class="bar" id="bootBar" hidden><i></i></div>
   <p class="err" id="bootErr" hidden></p>
@@ -332,16 +358,18 @@ body.filedrag::after{content:'Dosyaları buraya bırak → kataloğa ekle';posit
 /* ===== OneDrive bağlantısı: giriş (PKCE), Graph, dosya listesi ===== */
 (()=>{
 const CLIENT_ID='a6af8a6d-ae2c-4426-8441-82cd0f4331ac';
-const DEF_FOLDER='Dropbox Backup 28.06.2026/6-UB/instagram saved, from claude 10.10.26/tum gonderiler';
+const FOLDERS=['Dropbox Backup 28.06.2026/6-UB/UB Medya Arsiv - 10.10.26/tum gonderiler','Dropbox Backup 28.06.2026/6-UB/instagram saved, from claude 10.10.26/tum gonderiler'];
+const DEF_FOLDER=FOLDERS[0];
 const SCOPES='Files.ReadWrite User.Read offline_access';
 const AUTH='https://login.microsoftonline.com/consumers/oauth2/v2.0';
 const G='https://graph.microsoft.com/v1.0';
 const REDIRECT=location.origin+location.pathname.replace(/index\.html$/,'');
 const $b=s=>document.getElementById(s);
 const ls={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch{return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}},del(k){try{localStorage.removeItem(k)}catch{}}};
-const FOLDER=(ls.get('igweb.folder',DEF_FOLDER)||DEF_FOLDER).replace(/^\/+|\/+$/g,'');
+let FOLDER=(ls.get('igweb.folder',DEF_FOLDER)||DEF_FOLDER).replace(/^\/+|\/+$/g,'');
 const encPath=p=>p.split('/').map(encodeURIComponent).join('/');
-const FP=encPath(FOLDER);
+let FP=encPath(FOLDER);
+const setFolder=f=>{ FOLDER=f; FP=encPath(f); $b('bootFolder').value=f; if(window.__G) window.__G.folder=f; };
 const msg=(t,pct)=>{$b('bootMsg').textContent=t; if(pct!=null){$b('bootBar').hidden=false; $b('bootBar').firstElementChild.style.width=Math.round(pct*100)+'%';}};
 const fail=t=>{$b('bootErr').hidden=false; $b('bootErr').textContent=t; $b('bootBar').hidden=true;};
 $b('bootFolder').value=FOLDER;
@@ -430,7 +458,9 @@ window.__G={full,putCatalog,fetchCatalog,MAP,folder:FOLDER,
     try{ await token(); }catch(e){ if(e.login){ $b('bootLogin').hidden=false; msg('Arşivin OneDrive hesabında. Görmek için giriş yap.'); return; } throw e; }
 
     msg('Katalog verisi okunuyor…',.05);
-    const vi=await item('katalog_veri.json'); if(!vi) throw new Error(`“${FOLDER}/katalog_veri.json” OneDrive'da bulunamadı.\nKlasör adı farklıysa aşağıdaki Ayarlar'dan düzelt. Yükleme sürüyorsa biraz sonra tekrar dene.`);
+    let vi=await item('katalog_veri.json');
+    if(!vi&&!ls.get('igweb.folder',null)){ for(const f of FOLDERS){ if(f===FOLDER) continue; setFolder(f); vi=await item('katalog_veri.json'); if(vi) break; } if(!vi) setFolder(DEF_FOLDER); }
+    if(!vi) throw new Error(`“${FOLDER}/katalog_veri.json” OneDrive'da bulunamadı.\nKlasör adı farklıysa aşağıdaki Ayarlar'dan düzelt. Yükleme sürüyorsa biraz sonra tekrar dene.`);
     let veri=await cget('veri'); if(!veri||veri.tag!==vi.cTag){ msg('Katalog verisi indiriliyor ('+(vi.size/1e6).toFixed(1)+' MB)…',.1); veri={tag:vi.cTag,d:JSON.parse(await getText(vi))}; cset('veri',veri); }
     const total=veri.d.files||9000; let n=0;
     const tick=()=>{ n=Object.keys(MAP).length; msg(`Dosyalar listeleniyor… ${n.toLocaleString('tr-TR')} / ${total.toLocaleString('tr-TR')}`,.15+.75*Math.min(1,n/total)); };
@@ -439,7 +469,7 @@ window.__G={full,putCatalog,fetchCatalog,MAP,folder:FOLDER,
     const remote=await fetchCatalog();
     const KEY='igkatalog.v1'; const local=ls.get(KEY,null), dirty=ls.get('igkatalog.dirty',false);
     let note='';
-    if(remote&&remote.nodes){ const r={nodes:remote.nodes,assign:remote.assign,meta:remote.meta||{},seeds:remote.seeds,custom:remote.custom||{},queue:remote.queue||[],savedAt:remote.savedAt,updated:remote.updated};
+    if(remote&&remote.nodes){ const r={nodes:remote.nodes,assign:remote.assign,meta:remote.meta||{},seeds:remote.seeds,custom:remote.custom||{},queue:remote.queue||[],deleted:remote.deleted||{},migr:remote.migr||{},savedAt:remote.savedAt,updated:remote.updated};
       if(!local||!dirty){ ls.set(KEY,r); ls.set('igkatalog.dirty',false); }
       else if((remote.savedAt||'')>(local.savedAt||'')){ ETAG='"eski"'; note='Bu cihazda kaydedilmemiş değişiklikler var, OneDrive\'da da daha yeni bir sürüm var. 💾 Kaydet\'e basınca hangisinin kalacağını soracağım.'; } }
     window.__D={data:veri.d.data,seeds:veri.d.seeds,note};
@@ -481,7 +511,12 @@ function mergeSeeds(c){ // adds collections/assignments of accounts not yet in t
     for(const id in s.nodes){ if(c.nodes[id]) continue; const n={...s.nodes[id]}; if(!n.parent&&rootNames.has(n.name.toLocaleLowerCase('tr'))) n.name+=` (${tag})`; c.nodes[id]=n; }
     for(const k in s.assign){ const add=s.assign[k].filter(id=>c.nodes[id]); if(add.length) c.assign[k]=[...new Set([...(c.assign[k]||[]),...add])]; }
     c.seeds.push(acc); added.push(tag); }
+  c.deleted=c.deleted||{}; c.migr=c.migr||{};
+  if(!c.migr.kategorisiz){ const id='n_kategorisiz'; if(!c.nodes[id]) c.nodes[id]={id,name:'Kategorisiz',parent:null}; let n=0;
+    for(const k of DATA.map(p=>p.c).concat(Object.keys(c.custom||{}))){ if(c.deleted[k]) continue; if(!(c.assign[k]||[]).some(x=>c.nodes[x])){ c.assign[k]=[id]; n++; } }
+    c.migr.kategorisiz=new Date().toISOString(); if(n) added.push('Kategorisiz ('+n+' gönderi)'); }
   return added; }
+const isDel = k => !!(cat.deleted&&cat.deleted[k]);
 let cat = LS.get(KEY,null); let firstRun=!valid(cat);
 if(firstRun) cat = fresh();
 const mergedNow = mergeSeeds(cat);
@@ -499,7 +534,7 @@ function autoHistory(){ const now=Date.now(); if(now-lastHist<5*60e3) return; la
   const h=LS.get(HKEY,[]); h.unshift({t:new Date().toISOString(),d:cat}); while(h.length>10) h.pop();
   if(!LS.set(HKEY,h)){h.splice(3); LS.set(HKEY,h);} }
 function undo(){ if(!undoStack.length) return; cat=JSON.parse(undoStack.pop()); $('#undoBtn').disabled=!undoStack.length; changed(); toast('Geri alındı'); }
-function updateStatus(){ const s=$('#status'); s.textContent = dirtyFile ? '● Dosyaya kaydedilmedi' : (cat.savedAt?'✓ Kaydedildi '+new Date(cat.savedAt).toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'}):''); s.className='status'+(dirtyFile?' dirty':''); }
+function updateStatus(){ const s=$('#status'); s.textContent = dirtyFile ? '● Dosyaya kaydedilmedi' : (cat.savedAt?'✓ Kaydedildi '+new Date(cat.savedAt).toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'}):''); s.className='status'+(dirtyFile?' dirty':''); $('#filtDot').hidden=!dirtyFile; }
 const saveUI=()=>LS.set(UKEY,{open:ui.open,sel:ui.sel,type:ui.type,sort:ui.sort,q:ui.q,acc:ui.acc,year:ui.year});
 
 /* ---------- tree helpers ---------- */
@@ -519,7 +554,7 @@ function syncCustom(){ // posts added from this computer live in cat.custom (sav
   for(let i=DATA.length-1;i>=0;i--) if(DATA[i].custom){ delete BY[DATA[i].c]; DATA.splice(i,1); }
   for(const k in (cat.custom||{})){ const e=cat.custom[k]; const p={...e,custom:true,ig:e.ig||[],i:DATA.length,y:(e.t||'').slice(0,4)}; DATA.push(p); BY[p.c]=p; }
   const accs=[...new Set(DATA.map(p=>p.a))]; if(accs.join()!==ACCS.join()){ ACCS=accs; fillAcc(); } fillYear(); }
-function fillAcc(){ $('#acc').innerHTML='<option value="">Tüm hesaplar</option>'+ACCS.map(a=>`<option value="${a}">${esc(ACC_LABEL[a]||a)} (${DATA.filter(p=>p.a===a).length})</option>`).join(''); if(ui.acc&&!ACCS.includes(ui.acc)) ui.acc=''; $('#acc').value=ui.acc; $('#acc').hidden=ACCS.length<2; }
+function fillAcc(){ $('#acc').innerHTML='<option value="">Tüm hesaplar</option>'+ACCS.map(a=>`<option value="${a}">${esc(ACC_LABEL[a]||a)} (${DATA.filter(p=>p.a===a).length})</option>`).join(''); if(ui.acc&&!ACCS.includes(ui.acc)) ui.acc=''; $('#acc').value=ui.acc; $('#acc').hidden=true; ui.acc=''; }
 function fillYear(){ const yc={}; DATA.forEach(p=>{ if(p.y) yc[p.y]=(yc[p.y]||0)+1; }); const ys=Object.keys(yc).sort().reverse();
   const h='<option value="">Tüm yıllar</option>'+ys.map(y=>`<option value="${y}">${y} (${yc[y]})</option>`).join(''); if($('#year').innerHTML!==h) $('#year').innerHTML=h;
   if(ui.year&&!yc[ui.year]) ui.year=''; $('#year').value=ui.year; $('#year').title='Gönderinin paylaşıldığı (eklenenlerde dosyanın) yılı'; }
@@ -527,7 +562,7 @@ function index(){
   syncCustom();
   direct={}; for(const id in cat.nodes) direct[id]=new Set();
   uncategorized=0; tagCount={};
-  for(const p of DATA){ const a=assigned(p.c); if(!a.length) uncategorized++; a.forEach(id=>direct[id].add(p.c));
+  for(const p of DATA){ const a=assigned(p.c); if(isDel(p.c)){ p.s=low([p.u,p.cap].join(' ')); continue; } if(!a.length) uncategorized++; a.forEach(id=>direct[id].add(p.c));
     (note(p.c).tags||[]).forEach(t=>tagCount[t]=(tagCount[t]||0)+1);
     p.s = low([p.u,p.cap,(note(p.c).note||''),(note(p.c).tags||[]).join(' '),a.map(pathStr).join(' '),p.ig.join(' ')].join(' ')); }
   total={}; for(const id in cat.nodes){const s=new Set(); desc(id).forEach(d=>direct[d].forEach(c=>s.add(c))); total[id]=s.size;}
@@ -535,7 +570,8 @@ function index(){
 
 /* ---------- sidebar ---------- */
 function renderTree(){
-  $('#special').innerHTML = [['', '🗂 Tüm gönderiler', DATA.length], ['__none','📥 Kategorisiz', uncategorized], ['__noted','📝 Notlu / etiketli', DATA.filter(p=>{const m=note(p.c);return m.note||(m.tags&&m.tags.length)}).length]]
+  const nDel=Object.keys(cat.deleted||{}).filter(k=>BY[k]).length;
+  $('#special').innerHTML = [['', '🗂 Tüm gönderiler', DATA.length-nDel], ['__none','📥 Atanmamış', uncategorized], ['__noted','📝 Notlu / etiketli', DATA.filter(p=>{if(isDel(p.c)) return false; const m=note(p.c);return m.note||(m.tags&&m.tags.length)}).length], ...(nDel?[['__trash','🗑 Silinenler', nDel]]:[])]
     .map(([v,l,n])=>`<li><div class="node ${ui.sel===v?'sel':''}" data-sp="${v}"><span class="caret leaf"></span><span class="nname">${l}</span><span class="ncount" style="display:block">${n}</span></div></li>`).join('');
   const build = pid => kids(pid).map(n=>{ const ch=kids(n.id).length, open=ui.open[n.id];
     return `<li><div class="node ${ui.sel===n.id?'sel':''}" data-id="${n.id}" draggable="true">
@@ -663,16 +699,18 @@ let list=[], shown=0; const PAGE=48; const picked=new Set(); let selMode=false;
 function renderView(){
   const sel=ui.sel; const q=low(ui.q.trim()).split(/\s+/).filter(Boolean);
   let base;
-  if(sel==='__none') base=DATA.filter(p=>!assigned(p.c).length);
-  else if(sel==='__noted') base=DATA.filter(p=>{const m=note(p.c);return m.note||(m.tags&&m.tags.length)});
-  else if(sel&&N(sel)){ const s=new Set(); desc(sel).forEach(d=>direct[d].forEach(c=>s.add(c))); base=DATA.filter(p=>s.has(p.c)); }
-  else base=DATA;
+  const LIVE=DATA.filter(p=>!isDel(p.c));
+  if(sel==='__trash') base=DATA.filter(p=>isDel(p.c));
+  else if(sel==='__none') base=LIVE.filter(p=>!assigned(p.c).length);
+  else if(sel==='__noted') base=LIVE.filter(p=>{const m=note(p.c);return m.note||(m.tags&&m.tags.length)});
+  else if(sel&&N(sel)){ const s=new Set(); desc(sel).forEach(d=>direct[d].forEach(c=>s.add(c))); base=LIVE.filter(p=>s.has(p.c)); }
+  else base=LIVE;
   list=base.filter(p=>(!ui.type||p.m===ui.type)&&(!ui.acc||p.a===ui.acc)&&(!ui.year||p.y===ui.year)&&q.every(w=> w.startsWith('#') ? (note(p.c).tags||[]).some(t=>low(t)===w.slice(1)) : p.s.includes(w)));
   if(ui.sort==='new') list.sort((a,b)=>b.t.localeCompare(a.t)); else if(ui.sort==='old') list.sort((a,b)=>a.t.localeCompare(b.t)); else if(ui.sort==='user') list.sort((a,b)=>coll.compare(a.u,b.u)||b.t.localeCompare(a.t)); else list.sort((a,b)=>a.i-b.i);
   // crumbs
   let cr='';
   if(sel&&N(sel)) cr = `<button data-go="">Tümü</button>` + pathOf(sel).map((n,i,a)=>i<a.length-1?` › <button data-go="${n.id}">${esc(n.name)}</button>`:` › <b>${esc(n.name)}</b>`).join('');
-  else cr = `<b>${sel==='__none'?'Kategorisiz':sel==='__noted'?'Notlu / etiketli':'Tüm gönderiler'}</b>`;
+  else cr = `<b>${sel==='__none'?'Atanmamış':sel==='__noted'?'Notlu / etiketli':sel==='__trash'?'Silinenler':'Tüm gönderiler'}</b>`+(sel==='__trash'?' <span class="sub" style="color:var(--muted);font-size:13px">Silinen gönderiler burada bekler; dosyaları diskte durur. Açıp “Geri yükle” diyebilirsin.</span>':'');
   $('#crumbs').innerHTML = cr + `<span class="cnt">${list.length} gönderi</span>` + (sel&&N(sel)?` <button class="btn sm" data-sub="${sel}" style="margin-left:8px">＋ Alt kategori</button> <button class="btn sm" data-ren="${sel}">✎ Adını değiştir</button>`:'');
   const subs = sel&&N(sel)?kids(sel):(!sel?kids(''):[]);
   const LIM=12, cut=subs.length>LIM+3&&!subsOpen; const shownSubs=cut?subs.slice(0,LIM):subs;
@@ -709,7 +747,7 @@ $('#grid').addEventListener('keydown',e=>{if(e.key==='Enter'){const c=e.target.c
 function toggleSel(on){ selMode=on??!selMode; $('#selBtn').classList.toggle('on',selMode); $('#grid').classList.toggle('selmode',selMode); if(!selMode){picked.clear(); document.querySelectorAll('.card.picked').forEach(x=>x.classList.remove('picked'));} updateBulk(); }
 $('#selBtn').onclick=()=>toggleSel();
 function updateBulk(){ const n=picked.size; $('#bulk').hidden=!selMode; $('#bulkN').textContent=n?`${n} seçili`:'Gönderilere tıklayarak seç (Shift ile aralık)';
-  ['#bAdd','#bMove','#bTag'].forEach(s=>$(s).disabled=!n); $('#bRemove').disabled=!n||!curNode(); $('#bMove').disabled=!n||!curNode(); }
+  ['#bAdd','#bMove','#bTag','#bDel'].forEach(s=>$(s).disabled=!n); $('#bDel').textContent=ui.sel==='__trash'?'↺ Geri yükle':'🗑 Sil'; $('#bRemove').disabled=!n||!curNode(); $('#bMove').disabled=!n||!curNode(); }
 $('#bClear').onclick=()=>toggleSel(false);
 $('#bAll').onclick=()=>{ list.forEach(p=>picked.add(p.c)); document.querySelectorAll('.card').forEach(x=>x.classList.add('picked')); updateBulk(); };
 $('#bAdd').onclick=async()=>{ const id=await pickNode({title:`${picked.size} gönderiyi kategoriye ekle`}); if(id) assignTo([...picked],id,false); };
@@ -748,7 +786,7 @@ function renderLb(){ const p=BY[curCode]; const f=p.f[idx];
   renderLbMeta();
   $('#lbLink').href='https://www.instagram.com/p/'+(p.sc||p.c)+'/'; $('#lbFile').href='#'; $('#lbName').textContent=f?f.split('/').pop():'';
   $('#lbCap').textContent=p.cap||'(Açıklama yok)'; $('#lbIg').textContent=p.custom?('Bilgisayardan eklendi · '+new Date(p.added).toLocaleString('tr-TR')):('Kaydeden hesap: '+p.a+' · '+(p.ig.length?'Instagram koleksiyonu: '+p.ig.join(', '):'Instagram\'da koleksiyonsuz'));
-  $('#lbLink').hidden=!!p.custom; $('#lbDel').hidden=!p.custom;
+  $('#lbLink').hidden=!!p.custom; $('#lbDel').textContent=isDel(p.c)?'↺ Geri yükle':'🗑 Sil';
   $('#pPrev').disabled=cur<=0; $('#pNext').disabled=cur<0||cur>=list.length-1; }
 function renderLbMeta(){ const c=curCode, m=note(c);
   $('#lbCats').innerHTML=assigned(c).map(id=>`<span class="cchip"><i style="background:${color(id)}"></i>${esc(pathStr(id))}<button data-rm="${id}" title="Kaldır">✕</button></span>`).join('')+`<button class="btn sm" id="lbAdd">＋ Kategori</button>`;
@@ -780,7 +818,7 @@ async function idbGet(k){ try{const db=await idb(); return await new Promise(r=>
 async function idbSet(k,v){ try{const db=await idb(); db.transaction('h','readwrite').objectStore('h').put(v,k);}catch{} }
 async function archiveDir(){ // the folder that contains katalog.html and media/
   let d=await idbGet('dir');
-  if(d){ let st=await d.queryPermission?.({mode:'readwrite'}); if(st!=='granted') st=await d.requestPermission?.({mode:'readwrite'}); if(st==='granted') return d; }
+  if(d){ let st=await d.queryPermission?.({mode:'readwrite'}); if(st!=='granted') st=await d.requestPermission?.({mode:'readwrite'}); if(st==='granted'){ try{ await d.getFileHandle('katalog.html'); return d; }catch{ d=null; } } }
   const ok=await ask({title:'Arşiv klasörünü seç',body:'Eklenen dosyaları arşive kopyalayabilmem için bir kereye mahsus <b>katalog.html</b>\'in bulunduğu <b>tum gonderiler</b> klasörünü seçmen gerekiyor.<br><br>Açılan pencerede o klasöre girip <b>Klasör seç</b>\'e, ardından <b>Değişikliklere izin ver</b>\'e bas.',buttons:[{label:'Vazgeç',v:null},{label:'Klasörü seç',v:1,cls:'primary'}]});
   if(!ok) return null;
   d=await showDirectoryPicker({id:'igarsiv',mode:'readwrite'});
@@ -847,9 +885,14 @@ $('#addGo').onclick=async()=>{
   }catch(err){ console.warn(err); if(err.name!=='AbortError') toast('Eklenemedi: '+(err.message||err)); }
   finally{ btn.disabled=false; btn.textContent='Ekle'; snapshot.done=false; }
 };
-$('#lbDel').onclick=async()=>{ const p=BY[curCode]; if(!p?.custom) return;
-  const v=await ask({title:'Katalogdan kaldırılsın mı?',body:'Gönderi katalogdan çıkarılır. Dosya diskte (media/eklenen) kalır, silinmez. Geri al ile geri getirebilirsin.',buttons:[{label:'Vazgeç',v:null},{label:'Kaldır',v:1,cls:'primary'}]});
-  if(!v) return; snapshot(); delete cat.custom[p.c]; delete cat.assign[p.c]; delete cat.meta[p.c]; lb.close(); changed(); toast('Katalogdan kaldırıldı'); };
+function setDeleted(keys,on){ snapshot(); cat.deleted=cat.deleted||{}; const t=new Date().toISOString(); keys.forEach(k=>{ if(on) cat.deleted[k]=t; else delete cat.deleted[k]; }); changed(); }
+$('#lbDel').onclick=async()=>{ const p=BY[curCode]; if(!p) return; const k0=list.findIndex(x=>x.c===p.c);
+  if(isDel(p.c)){ setDeleted([p.c],false); toast('Geri yüklendi'); }
+  else { const v=await ask({title:'Bu gönderi silinsin mi?',body:'Gönderi katalogdan kaldırılır ve <b>🗑 Silinenler</b> bölümüne gider; oradan geri yükleyebilirsin. Dosyaları diskte durur.',buttons:[{label:'Vazgeç',v:null},{label:'Sil',v:1,cls:'primary'}]}); if(!v) return; setDeleted([p.c],true); toast('Silindi — 🗑 Silinenler\'den geri alabilirsin'); }
+  if(!list.length){ lb.close(); return; } if(list.some(x=>x.c===p.c)) return renderLb(); cur=Math.max(0,Math.min(k0,list.length-1)); curCode=list[cur].c; idx=0; renderLb(); };
+$('#bDel').onclick=async()=>{ const keys=[...picked]; if(!keys.length) return; const restore=ui.sel==='__trash';
+  if(!restore){ const v=await ask({title:`${keys.length} gönderi silinsin mi?`,body:'Seçilen gönderiler <b>🗑 Silinenler</b> bölümüne gider; oradan geri yükleyebilirsin. Dosyaları diskte durur.',buttons:[{label:'Vazgeç',v:null},{label:'Sil',v:1,cls:'primary'}]}); if(!v) return; }
+  setDeleted(keys,!restore); picked.clear(); updateBulk(); toast(restore?`${keys.length} gönderi geri yüklendi`:`${keys.length} gönderi silindi`); };
 
 /* ---------- file save / load ---------- */
 const idb=()=>new Promise((res,rej)=>{const r=indexedDB.open('igkatalog',1); r.onupgradeneeded=()=>r.result.createObjectStore('h'); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error);});
@@ -865,7 +908,7 @@ async function saveFile(as){
     if(r.conflict){
       const v=await ask({title:'OneDrive\'da daha yeni bir sürüm var',body:'Katalog başka bir cihazdan kaydedilmiş. Ne yapalım?',buttons:[{label:'Vazgeç',v:null},{label:'OneDrive\'dakini yükle',v:'load'},{label:'Benimkiyle üzerine yaz',v:'over',cls:'primary'}]});
       if(!v) return;
-      if(v==='load'){ const d=await window.__G.fetchCatalog(); snapshot(); cat={nodes:d.nodes,assign:d.assign,meta:d.meta||{},seeds:d.seeds,custom:d.custom||{},queue:d.queue||[],savedAt:d.savedAt,updated:d.updated}; mergeSeeds(cat); ui.sel=''; changed(); dirtyFile=false; LS.set('igkatalog.dirty',false); LS.set(KEY,cat); updateStatus(); toast('OneDrive\'daki sürüm yüklendi'); return; }
+      if(v==='load'){ const d=await window.__G.fetchCatalog(); snapshot(); cat={nodes:d.nodes,assign:d.assign,meta:d.meta||{},seeds:d.seeds,custom:d.custom||{},queue:d.queue||[],deleted:d.deleted||{},migr:d.migr||{},savedAt:d.savedAt,updated:d.updated}; mergeSeeds(cat); ui.sel=''; changed(); dirtyFile=false; LS.set('igkatalog.dirty',false); LS.set(KEY,cat); updateStatus(); toast('OneDrive\'daki sürüm yüklendi'); return; }
       r=await window.__G.putCatalog(text(),true);
     }
     cat.savedAt=stamp; dirtyFile=false; LS.set('igkatalog.dirty',false); LS.set(KEY,cat); updateStatus(); toast('OneDrive\'a kaydedildi');
@@ -874,7 +917,7 @@ async function saveFile(as){
 }
 async function reloadSaved(){ try{ const d=await window.__G.fetchCatalog(); if(!d) return toast('OneDrive\'da henüz katalog.json yok');
   if(dirtyFile){ const v=await ask({title:'Kaydedilmemiş değişiklikler var',body:'OneDrive\'daki sürüm yüklenirse bu değişiklikler kaybolur (Geri al ile dönebilirsin).',buttons:[{label:'Vazgeç',v:null},{label:'Yine de yükle',v:1,cls:'primary'}]}); if(!v) return; }
-  snapshot(); cat={nodes:d.nodes,assign:d.assign,meta:d.meta||{},seeds:d.seeds,custom:d.custom||{},queue:d.queue||[],savedAt:d.savedAt,updated:d.updated}; mergeSeeds(cat); ui.sel=''; changed(); dirtyFile=false; LS.set('igkatalog.dirty',false); LS.set(KEY,cat); updateStatus(); toast('OneDrive\'dan yenilendi'); }catch(e){ console.warn(e); toast('OneDrive okunamadı'); } }
+  snapshot(); cat={nodes:d.nodes,assign:d.assign,meta:d.meta||{},seeds:d.seeds,custom:d.custom||{},queue:d.queue||[],deleted:d.deleted||{},migr:d.migr||{},savedAt:d.savedAt,updated:d.updated}; mergeSeeds(cat); ui.sel=''; changed(); dirtyFile=false; LS.set('igkatalog.dirty',false); LS.set(KEY,cat); updateStatus(); toast('OneDrive\'dan yenilendi'); }catch(e){ console.warn(e); toast('OneDrive okunamadı'); } }
 $('#saveBtn').onclick=()=>saveFile(false);
 document.addEventListener('keydown',e=>{ if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault(); saveFile(false);} if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'&&!e.target.matches('input,textarea')){e.preventDefault(); undo();} if(e.key==='Escape'&&selMode&&!document.querySelector('dialog[open]')) toggleSel(false); });
 $('#undoBtn').onclick=undo;
@@ -886,9 +929,9 @@ $('#menu').addEventListener('click',async e=>{ const a=e.target.closest('[data-a
   if(a==='saveas') saveFile(true);
   if(a==='csv') exportCSV();
   if(a==='history') showHistory();
-  if(a==='reset'){ const v=await ask({title:'Instagram koleksiyonlarına sıfırla?',body:'Tüm kategori düzenlemelerin, notların ve etiketlerin başlangıç durumuna döner. Bilgisayardan eklediğin gönderiler ve indirilecekler listesi korunur. (Geri al ile geri getirebilirsin.)',buttons:[{label:'Vazgeç',v:null},{label:'Sıfırla',v:1,cls:'primary'}]}); if(v){ snapshot(); const keep={custom:cat.custom||{},queue:cat.queue||[]}; cat=fresh(); Object.assign(cat,keep); mergeSeeds(cat); ui.sel=''; changed(); } }
+  if(a==='reset'){ const v=await ask({title:'Instagram koleksiyonlarına sıfırla?',body:'Tüm kategori düzenlemelerin, notların ve etiketlerin başlangıç durumuna döner. Bilgisayardan eklediğin gönderiler ve indirilecekler listesi korunur. (Geri al ile geri getirebilirsin.)',buttons:[{label:'Vazgeç',v:null},{label:'Sıfırla',v:1,cls:'primary'}]}); if(v){ snapshot(); const keep={custom:cat.custom||{},queue:cat.queue||[],deleted:cat.deleted||{}}; cat=fresh(); Object.assign(cat,keep); mergeSeeds(cat); ui.sel=''; changed(); } }
 });
-$('#fileIn').onchange=async e=>{ const f=e.target.files[0]; if(!f) return; try{ const d=JSON.parse(await f.text()); if(!valid(d)) throw 0; snapshot(); cat={nodes:d.nodes,assign:d.assign,meta:d.meta,seeds:d.seeds,custom:d.custom||{},queue:d.queue||[],savedAt:d.savedAt,updated:d.updated}; const ad=mergeSeeds(cat); if(ad.length) toast('Yeni hesap koleksiyonları eklendi: '+ad.join(', ')); ui.sel=''; changed(); dirtyFile=false; LS.set('igkatalog.dirty',false); updateStatus(); toast('Katalog yüklendi: '+f.name);}catch{ toast('Bu dosya geçerli bir katalog değil'); } e.target.value=''; };
+$('#fileIn').onchange=async e=>{ const f=e.target.files[0]; if(!f) return; try{ const d=JSON.parse(await f.text()); if(!valid(d)) throw 0; snapshot(); cat={nodes:d.nodes,assign:d.assign,meta:d.meta,seeds:d.seeds,custom:d.custom||{},queue:d.queue||[],deleted:d.deleted||{},migr:d.migr||{},savedAt:d.savedAt,updated:d.updated}; const ad=mergeSeeds(cat); if(ad.length) toast('Yeni hesap koleksiyonları eklendi: '+ad.join(', ')); ui.sel=''; changed(); dirtyFile=false; LS.set('igkatalog.dirty',false); updateStatus(); toast('Katalog yüklendi: '+f.name);}catch{ toast('Bu dosya geçerli bir katalog değil'); } e.target.value=''; };
 async function showHistory(){ const h=LS.get(HKEY,[]); if(!h.length) return toast('Henüz otomatik yedek yok');
   const v=await ask({title:'Otomatik yedekler',body:'Tarayıcının sakladığı son sürümler (en fazla 10, 5 dakikada bir):',buttons:[...h.map((x,i)=>({label:new Date(x.t).toLocaleString('tr-TR'),v:i})),{label:'Kapat',v:null,cls:'primary'}]});
   if(v==null) return; snapshot(); cat=structuredClone(h[v].d); changed(); toast('Yedek geri yüklendi'); }
@@ -899,7 +942,18 @@ function exportCSV(){ const rows=[['shortcode','url','kaydeden_hesap','hesap','t
 
 /* ---------- header controls ---------- */
 let qT; $('#q').addEventListener('input',e=>{ui.q=e.target.value; clearTimeout(qT); qT=setTimeout(()=>{saveUI();renderView()},150)});
-$('#type').addEventListener('click',e=>{const b=e.target.closest('button'); if(!b) return; ui.type=b.dataset.v; document.querySelectorAll('#type button').forEach(x=>x.setAttribute('aria-pressed',x===b)); saveUI(); renderView();});
+$('#type').onchange=e=>{ui.type=e.target.value; saveUI(); renderView();};
+// mobile: filter panel + hide header while scrolling down
+const isMob=()=>matchMedia('(max-width:900px)').matches;
+$('#filtBtn').onclick=e=>{ e.stopPropagation(); const h=document.querySelector('header'); const o=!h.classList.contains('open'); h.classList.toggle('open',o); $('#filtBtn').setAttribute('aria-expanded',o); };
+document.addEventListener('click',e=>{ if(isMob()&&!e.target.closest('header')&&!e.target.closest('dialog')) document.querySelector('header').classList.remove('open'); });
+{ let lastY=0; $('#main').addEventListener('scroll',()=>{ if(!isMob()) return; const y=$('#main').scrollTop; const app=$('#app');
+  if(y>lastY+8&&y>90){ app.classList.add('hdrhide'); document.querySelector('header').classList.remove('open'); } else if(y<lastY-8||y<40) app.classList.remove('hdrhide'); lastY=y; },{passive:true}); }
+// touch swipe in the viewer (carousel like Instagram; at the ends → next/previous post)
+{ let tx=null,ty=null; $('#stage').addEventListener('touchstart',e=>{ if(e.touches.length!==1){tx=null;return;} tx=e.touches[0].clientX; ty=e.touches[0].clientY; },{passive:true});
+  $('#stage').addEventListener('touchend',e=>{ if(tx==null) return; const t=e.changedTouches[0], dx=t.clientX-tx, dy=t.clientY-ty; tx=null;
+    if(Math.abs(dx)<45||Math.abs(dx)<Math.abs(dy)*1.3) return; const d=dx<0?1:-1; const n=BY[curCode].f.length;
+    if(n>1&&idx+d>=0&&idx+d<n){ idx+=d; renderLb(); } else post(d); },{passive:true}); }
 $('#sort').onchange=e=>{ui.sort=e.target.value; saveUI(); renderView();};
 fillAcc();
 $('#acc').onchange=e=>{ui.acc=e.target.value; saveUI(); renderView();};
@@ -910,7 +964,7 @@ window.addEventListener('storage',e=>{ if(e.key!==KEY||!e.newValue) return; try{
 window.addEventListener('beforeunload',e=>{ if(staleTab) return; const cur=LS.get(KEY,null); if(cur&&((cur.updated||'')>(cat.updated||'')||(cur.savedAt||'')>(cat.savedAt||''))) return; LS.set(KEY,cat); });
 
 /* ---------- init ---------- */
-$('#q').value=ui.q; $('#sort').value=ui.sort; document.querySelectorAll('#type button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.v===ui.type));
+$('#q').value=ui.q; $('#sort').value=ui.sort; $('#type').value=ui.type;
 if(ui.sel && !ui.sel.startsWith('__') && !N(ui.sel)) ui.sel='';
 index(); renderTree(); renderView(); updateStatus();
 if(window.__D.note) setTimeout(()=>toast(window.__D.note),600);
