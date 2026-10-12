@@ -523,7 +523,7 @@ const isDel = k => !!(cat.deleted&&cat.deleted[k]);
 let cat = LS.get(KEY,null); let firstRun=!valid(cat);
 if(firstRun) cat = fresh();
 const mergedNow = mergeSeeds(cat);
-const ui = Object.assign({open:{}, sel:'', type:'', sort:'new', q:'', acc:'', year:''}, LS.get(UKEY,{}));
+const ui = {open:{}, sel:'', type:'', sort:'new', q:'', acc:'', year:''}; // every visit starts on the home page, newest first
 let undoStack=[], dirtyFile = LS.get('igkatalog.dirty', false);
 function snapshot(){undoStack.push(JSON.stringify(cat)); if(undoStack.length>60) undoStack.shift(); $('#undoBtn').disabled=false;}
 let saveT, staleTab=false; // staleTab: another tab changed the catalog after this one → never overwrite it with this tab's older copy
@@ -979,6 +979,24 @@ $('#year').onchange=e=>{ui.year=e.target.value; saveUI(); renderView();};
 $('#sideToggle').onclick=()=>$('#app').classList.toggle('sideopen');
 window.addEventListener('storage',e=>{ if(e.key!==KEY||!e.newValue) return; try{ const o=JSON.parse(e.newValue); if((o.updated||'')>(cat.updated||'')||(o.savedAt||'')>(cat.savedAt||'')){ staleTab=true; toast('Katalog başka bir sekmede değişti — bu sekmeyi yenile (F5)'); } }catch{} });
 window.addEventListener('beforeunload',e=>{ if(staleTab) return; const cur=LS.get(KEY,null); if(cur&&((cur.updated||'')>(cat.updated||'')||(cur.savedAt||'')>(cat.savedAt||''))) return; LS.set(KEY,cat); });
+
+/* ---------- back button: step back one level, confirm before leaving ---------- */
+{ let armed=false; const arm=()=>{ if(!armed){ history.pushState({ubg:Date.now()},''); armed=true; } };
+  async function backStep(){
+    const dl=[...document.querySelectorAll('dialog[open]')].filter(d=>d.id!=='lb'); if(dl.length){ dl.at(-1).close(); return; }
+    if(lb.open){ lb.close(); return; }
+    const hd=document.querySelector('header'); if(hd.classList.contains('open')){ hd.classList.remove('open'); return; }
+    if($('#app').classList.contains('sideopen')){ $('#app').classList.remove('sideopen'); return; }
+    if(selMode){ toggleSel(false); return; }
+    if(ui.q||ui.type||ui.year){ ui.q=''; ui.type=''; ui.year=''; $('#q').value=''; $('#type').value=''; $('#year').value=''; renderView(); return; }
+    if(ui.sel){ const n=N(ui.sel); select(n&&n.parent?n.parent:''); return; }
+    if($('#main').scrollTop>200){ $('#main').scrollTo({top:0,behavior:'smooth'}); $('#app').classList.remove('hdrhide'); return; }
+    const v=await ask({title:'Katalogdan çıkılsın mı?',body:'Çıkmak istiyorsan <b>Çık</b>\'a bas.',buttons:[{label:'Çık',v:'exit'},{label:'Kal',v:null,cls:'primary'}]});
+    if(v==='exit'){ leaving=true; armed=true; history.back(); setTimeout(()=>{ if(leaving){ leaving=false; armed=false; arm(); toast('Çıkmak için sekmeyi kapatabilirsin'); } },1500); }
+  }
+  let leaving=false;
+  window.addEventListener('popstate',()=>{ if(leaving){ history.back(); return; } armed=false; arm(); backStep(); });
+  arm(); ['pointerdown','keydown','touchstart'].forEach(t=>document.addEventListener(t,()=>arm(),{capture:true,passive:true})); }
 
 /* ---------- init ---------- */
 $('#q').value=ui.q; $('#sort').value=ui.sort; $('#type').value=ui.type;
