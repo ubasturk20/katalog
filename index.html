@@ -169,7 +169,7 @@ body.filedrag::after{content:'Dosyaları buraya bırak → kataloğa ekle';posit
 .toast{position:fixed;left:50%;top:16px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:10px;font-size:14px;z-index:50;box-shadow:var(--shadow)}
 .sidetoggle{display:none}
 .hctl{display:contents}
-#filtBtn{display:none}
+#filtBtn,#saveBtnM{display:none}
 #media{touch-action:pan-y}
 .sidecount-trash{color:var(--danger)}
 @media (max-width:900px){
@@ -186,7 +186,8 @@ body.filedrag::after{content:'Dosyaları buraya bırak → kataloğa ekle';posit
   .thumb img{min-height:80px}
   header{flex-wrap:nowrap;position:relative;padding:8px 10px}
   header h1{font-size:19px;flex:1;overflow:hidden;text-overflow:ellipsis}
-  #filtBtn{display:inline-flex}
+  #filtBtn,#saveBtnM{display:inline-flex}
+  #saveBtnM{padding:0 10px}
   .hctl{display:none;position:absolute;top:100%;left:0;right:0;z-index:25;background:var(--bg);border-bottom:1px solid var(--line);box-shadow:var(--shadow);padding:10px;gap:8px;flex-wrap:wrap}
   header.open .hctl{display:flex}
   .hctl .search{flex:1 1 100%}
@@ -207,6 +208,7 @@ body.filedrag::after{content:'Dosyaları buraya bırak → kataloğa ekle';posit
   <button class="btn sidetoggle" id="sideToggle" aria-label="Kategoriler">☰</button>
   <h1>UB Medya Arsiv</h1>
   <button class="btn" id="filtBtn" aria-expanded="false" title="Arama ve filtreler">⚙ Filtre<span id="filtDot" hidden style="color:var(--accent)"> ●</span></button>
+  <button class="btn primary" id="saveBtnM" title="Kaydet">💾 Kaydet</button>
   <div class="hctl" id="hctl">
   <label class="search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
     <input id="q" type="search" placeholder="Ara: açıklama, hesap, not, etiket, kategori…" autocomplete="off"></label>
@@ -442,6 +444,7 @@ async function putCatalog(text,force){
 async function fetchCatalog(){ const it=await item('katalog.json'); if(!it) return null; const d=JSON.parse(await getText(it)); ETAG=it.eTag; return d; }
 
 window.__G={full,putCatalog,fetchCatalog,MAP,folder:FOLDER,
+  remoteTag:async()=>{ const it=await item('katalog.json'); return it?it.eTag:null; }, etag:()=>ETAG,
   th:rel=>MAP[rel]?.th||''};
 
 /* --- açılış --- */
@@ -528,6 +531,7 @@ function changed(){
   cat.updated=new Date().toISOString(); dirtyFile=true; LS.set('igkatalog.dirty',true);
   clearTimeout(saveT); staleTab=false; saveT=setTimeout(()=>{ if(!LS.set(KEY,cat)) toast('Tarayıcı belleğine yazılamadı — lütfen 💾 Kaydet kullan'); autoHistory(); },300);
   index(); renderTree(); renderView(); updateStatus();
+  if(window.__autoSave) window.__autoSave();
 }
 let lastHist=0;
 function autoHistory(){ const now=Date.now(); if(now-lastHist<5*60e3) return; lastHist=now;
@@ -899,25 +903,38 @@ const idb=()=>new Promise((res,rej)=>{const r=indexedDB.open('igkatalog',1); r.o
 async function getHandle(){ try{const db=await idb(); return await new Promise(r=>{const q=db.transaction('h').objectStore('h').get('file'); q.onsuccess=()=>r(q.result); q.onerror=()=>r(null);});}catch{return null} }
 async function setHandle(h){ try{const db=await idb(); db.transaction('h','readwrite').objectStore('h').put(h,'file');}catch{} }
 function payload(){ return JSON.stringify({...cat, savedAt:new Date().toISOString(), app:'igkatalog', posts:DATA.length}, null, 1); }
-async function saveFile(as){
+let autoBlocked=false;
+function catFrom(d){ return {nodes:d.nodes,assign:d.assign,meta:d.meta||{},seeds:d.seeds,custom:d.custom||{},queue:d.queue||[],deleted:d.deleted||{},migr:d.migr||{},savedAt:d.savedAt,updated:d.updated}; }
+function applyRemote(d,msg){ cat=catFrom(d); mergeSeeds(cat); dirtyFile=false; LS.set('igkatalog.dirty',false); LS.set(KEY,cat);
+  if(ui.sel&&!ui.sel.startsWith('__')&&!N(ui.sel)) ui.sel=''; index(); renderTree(); renderView(); updateStatus(); if(lb.open&&curCode&&BY[curCode]) renderLbMeta(); if(msg) toast(msg); }
+$('#saveBtnM').onclick=()=>saveFile(false);
+async function saveFile(as,auto){
   if(as){ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([payload()],{type:'application/json'})); a.download='katalog.json'; a.click(); toast('Bir kopya indirildi'); return; }
-  const btn=$('#saveBtn'); btn.disabled=true; const prev=btn.textContent; btn.textContent='Kaydediliyor…';
+  const btn=$('#saveBtn'); btn.disabled=true; const prev=btn.textContent; if(!auto) btn.textContent='Kaydediliyor…';
   try{
     const stamp=new Date().toISOString(); const text=()=>JSON.stringify({...cat, savedAt:stamp, app:'igkatalog', posts:DATA.length}, null, 1);
     let r=await window.__G.putCatalog(text());
     if(r.conflict){
+      if(auto){ autoBlocked=true; toast('OneDrive\'da başka cihazdan daha yeni bir kayıt var — 💾 Kaydet\'e basınca seçebilirsin'); return; }
       const v=await ask({title:'OneDrive\'da daha yeni bir sürüm var',body:'Katalog başka bir cihazdan kaydedilmiş. Ne yapalım?',buttons:[{label:'Vazgeç',v:null},{label:'OneDrive\'dakini yükle',v:'load'},{label:'Benimkiyle üzerine yaz',v:'over',cls:'primary'}]});
       if(!v) return;
       if(v==='load'){ const d=await window.__G.fetchCatalog(); snapshot(); cat={nodes:d.nodes,assign:d.assign,meta:d.meta||{},seeds:d.seeds,custom:d.custom||{},queue:d.queue||[],deleted:d.deleted||{},migr:d.migr||{},savedAt:d.savedAt,updated:d.updated}; mergeSeeds(cat); ui.sel=''; changed(); dirtyFile=false; LS.set('igkatalog.dirty',false); LS.set(KEY,cat); updateStatus(); toast('OneDrive\'daki sürüm yüklendi'); return; }
       r=await window.__G.putCatalog(text(),true);
     }
-    cat.savedAt=stamp; dirtyFile=false; LS.set('igkatalog.dirty',false); LS.set(KEY,cat); updateStatus(); toast('OneDrive\'a kaydedildi');
-  }catch(e){ console.warn(e); toast('Kaydedilemedi — internet bağlantısını kontrol edip tekrar dene'); }
+    cat.savedAt=stamp; dirtyFile=false; LS.set('igkatalog.dirty',false); LS.set(KEY,cat); updateStatus(); if(!auto){ autoBlocked=false; toast('OneDrive\'a kaydedildi'); }
+  }catch(e){ console.warn(e); if(!auto) toast('Kaydedilemedi — internet bağlantısını kontrol edip tekrar dene'); }
   finally{ btn.disabled=false; btn.textContent=prev; }
 }
 async function reloadSaved(){ try{ const d=await window.__G.fetchCatalog(); if(!d) return toast('OneDrive\'da henüz katalog.json yok');
   if(dirtyFile){ const v=await ask({title:'Kaydedilmemiş değişiklikler var',body:'OneDrive\'daki sürüm yüklenirse bu değişiklikler kaybolur (Geri al ile dönebilirsin).',buttons:[{label:'Vazgeç',v:null},{label:'Yine de yükle',v:1,cls:'primary'}]}); if(!v) return; }
   snapshot(); cat={nodes:d.nodes,assign:d.assign,meta:d.meta||{},seeds:d.seeds,custom:d.custom||{},queue:d.queue||[],deleted:d.deleted||{},migr:d.migr||{},savedAt:d.savedAt,updated:d.updated}; mergeSeeds(cat); ui.sel=''; changed(); dirtyFile=false; LS.set('igkatalog.dirty',false); LS.set(KEY,cat); updateStatus(); toast('OneDrive\'dan yenilendi'); }catch(e){ console.warn(e); toast('OneDrive okunamadı'); } }
+{ let t=null; window.__autoSave=()=>{ if(autoBlocked) return; clearTimeout(t); t=setTimeout(()=>{ if(dirtyFile) saveFile(false,true); },4000); }; }
+let pulling=false;
+async function pullRemote(){ if(dirtyFile||document.hidden||pulling) return; pulling=true;
+  try{ const tag=await window.__G.remoteTag(); if(tag&&tag!==window.__G.etag()){ const d=await window.__G.fetchCatalog(); if(d&&!dirtyFile) applyRemote(d,'Diğer cihazdaki değişiklikler alındı'); } }catch(e){ console.warn(e); }
+  pulling=false; }
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) pullRemote(); }); setInterval(pullRemote,45000);
+window.__pullRemote=pullRemote;
 $('#saveBtn').onclick=()=>saveFile(false);
 document.addEventListener('keydown',e=>{ if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault(); saveFile(false);} if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'&&!e.target.matches('input,textarea')){e.preventDefault(); undo();} if(e.key==='Escape'&&selMode&&!document.querySelector('dialog[open]')) toggleSel(false); });
 $('#undoBtn').onclick=undo;
