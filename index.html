@@ -424,16 +424,20 @@ function showTiming(){ const box=document.createElement('div'); box.id='olcum';
   box.innerHTML=`<b>Açılış süresi ölçümü</b> <span style="color:var(--muted)">(${navigator.connection?.effectiveType||'?'} bağlantı)</span><br>`+TM.map(([k,s,e])=>`${s} sn — ${k}${e?' ('+e+')':''}`).join('<br>')+(pg?'<br><b>Liste ayrıntısı</b><br>'+pg:'')+
     `<br><span style="color:var(--muted)">Ekran görüntüsünü alıp Claude'a gönder.</span> <button style="float:right;border:0;background:var(--accent);color:var(--accent-ink);border-radius:8px;padding:4px 12px">Kapat</button>`;
   box.querySelector('button').onclick=()=>box.remove(); document.body.appendChild(box); }
-async function list(rel,onPage){ const ps=performance.now(); PG[rel]={n:0,f:0,s:0};
-  const base=`/me/drive/root:/${FP}/${encPath(rel)}:/children?$top=1000`;
-  const r=await graph(base+'&$expand=thumbnails'); if(r.status===404){ PG[rel].yok=1; return; } if(!r.ok) throw new Error(rel+' listelenemedi ('+r.status+')');
+/* hızlı liste: küçük resimsiz (video/indirme bağlantıları gelir); küçük resimler telefondaki önbellekten */
+let THC={};
+async function list(rel,onPage,thumbs){ const ps=performance.now(); if(!thumbs) PG[rel]={n:0,f:0,s:0};
+  const base=`/me/drive/root:/${FP}/${encPath(rel)}:/children?$top=1000`+(thumbs?'&$expand=thumbnails':'');
+  const r=await graph(base); if(r.status===404){ if(!thumbs) PG[rel].yok=1; return; } if(!r.ok) throw new Error(rel+' listelenemedi ('+r.status+')');
   const al=BK.includes(rel)?rel.slice(0,rel.lastIndexOf('/')):null; await take(await r.json());
-  async function take(j){ const t=Date.now(); PG[rel].n++; PG[rel].f+=(j.value||[]).filter(x=>x.file).length; PG[rel].s=(performance.now()-ps)/1000;
-    for(const it of j.value||[]){ if(!it.file) continue; const th=it.thumbnails?.[0]?.large?.url||it.thumbnails?.[0]?.medium?.url||'';
+  async function take(j){ const t=Date.now(); if(!thumbs){ PG[rel].n++; PG[rel].f+=(j.value||[]).filter(x=>x.file).length; PG[rel].s=(performance.now()-ps)/1000; }
+    for(const it of j.value||[]){ if(!it.file) continue; const k=rel+'/'+it.name, ka=al?al+'/'+it.name:null;
+      if(thumbs){ const th=it.thumbnails?.[0]?.large?.url||it.thumbnails?.[0]?.medium?.url||''; if(th){ THC[k]=th; if(ka) THC[ka]=th; } continue; }
       const dl=it['@microsoft.graph.downloadUrl']||it['@content.downloadUrl']||'';
-      const o={id:it.id,th,dl,t}; MAP[rel+'/'+it.name]=o; if(al&&!MAP[al+'/'+it.name]?.id) MAP[al+'/'+it.name]=o; }
+      const o={id:it.id,th:THC[k]||'',dl,t}; MAP[k]=o; if(ka&&!MAP[ka]?.id) MAP[ka]=o; }
     onPage&&onPage(); if(j['@odata.nextLink']){ const r=await graph(j['@odata.nextLink']); if(!r.ok) throw new Error(rel+' sayfası alınamadı ('+r.status+')'); await take(await r.json()); } }
 }
+const isImgF=r=>/\.(jpe?g|png|webp|gif|heic)$/i.test(r);
 async function full(rel){ const e=MAP[rel]; if(!e) return '';
   if(e.dl&&Date.now()-e.t<45*60e3) return e.dl;
   try{ const r=await graph(`/me/drive/items/${e.id}`); if(r.ok){ const j=await r.json(); const u=j['@microsoft.graph.downloadUrl']||j['@content.downloadUrl']; if(u){ e.dl=u; e.t=Date.now(); return u; } } }catch(err){ console.warn(err); }
@@ -460,7 +464,8 @@ async function fetchCatalog(){ const it=await item('katalog.json'); if(!it) retu
 
 window.__G={full,putCatalog,fetchCatalog,MAP,folder:FOLDER,
   remoteTag:async()=>{ const it=await item('katalog.json'); return it?it.eTag:null; }, etag:()=>ETAG,
-  th:rel=>MAP[rel]?.th||''};
+  th:rel=>{ const e=MAP[rel]; return e?(e.th||(isImgF(rel)?e.dl:'')):''; },
+  alt:rel=>{ const e=MAP[rel]; return e&&isImgF(rel)?e.dl:''; } };
 
 /* --- açılış --- */
 (async()=>{
@@ -481,8 +486,9 @@ window.__G={full,putCatalog,fetchCatalog,MAP,folder:FOLDER,
     if(!vi) throw new Error(`“${FOLDER}/katalog_veri.json” OneDrive'da bulunamadı.\nKlasör adı farklıysa aşağıdaki Ayarlar'dan düzelt. Yükleme sürüyorsa biraz sonra tekrar dene.`);
     mark('Veri dosyası bilgisi alındı'); let veri=await cget('veri'); let vc='telefondaki kayıttan'; if(!veri||veri.tag!==vi.cTag){ vc='OneDrive\'dan indirildi, '+(vi.size/1e6).toFixed(1)+' MB'; msg('Katalog verisi indiriliyor ('+(vi.size/1e6).toFixed(1)+' MB)…',.1); veri={tag:vi.cTag,d:JSON.parse(await getText(vi))}; cset('veri',veri); }
     mark('Katalog verisi hazır',vc);
+    const thc=await cget('thumbs'); if(thc&&thc.f===FOLDER&&thc.m) THC=thc.m; const thAge=thc?Date.now()-(thc.t||0):1e15;
     const total=veri.d.files||9000; let n=0;
-    const tick=()=>{ n=Object.keys(MAP).length; msg(`Dosyalar listeleniyor… ${n.toLocaleString('tr-TR')} / ${total.toLocaleString('tr-TR')}`,.15+.75*Math.min(1,n/total)); };
+    const tick=()=>{ n=Object.values(PG).reduce((s,v)=>s+v.f,0); msg(`Dosyalar listeleniyor… ${n.toLocaleString('tr-TR')} / ${total.toLocaleString('tr-TR')}`,.15+.75*Math.min(1,n/total)); };
     await Promise.all(['media','media/_kapak','media/eklenen',...BK].map(f=>list(f,tick)));
     mark('Dosya listesi tamam',Object.values(PG).reduce((s,v)=>s+v.f,0)+' dosya'); msg('Düzenlemeler okunuyor…',.95);
     const remote=await fetchCatalog();
@@ -493,7 +499,13 @@ window.__G={full,putCatalog,fetchCatalog,MAP,folder:FOLDER,
       if(!local||!dirty){ ls.set(KEY,r); ls.set('igkatalog.dirty',false); }
       else if((remote.savedAt||'')>(local.savedAt||'')){ ETAG='"eski"'; note='Bu cihazda kaydedilmemiş değişiklikler var, OneDrive\'da da daha yeni bir sürüm var. 💾 Kaydet\'e basınca hangisinin kalacağını soracağım.'; } }
     window.__D={data:veri.d.data,seeds:veri.d.seeds,note};
+    const thN=Object.values(MAP).filter(e=>e.th).length; mark('Küçük resim önbellekten',thN?'var, '+Math.round(thAge/36e5)+' saat önce':'yok — fotoğrafın kendisi gösterilecek');
     $b('boot').remove(); window.__start(); mark('Katalog ekranda'); showTiming();
+    // küçük resim bağlantılarını arka planda, tek tek klasör tazele (12 saatte bir)
+    if(thAge>12*36e5){ setTimeout(async()=>{ const N={}; const old=THC; THC=N;
+      try{ for(const f of [...BK,'media','media/_kapak','media/eklenen']) await list(f,null,true);
+        for(const k in N){ if(MAP[k]&&!MAP[k].th) MAP[k].th=N[k]; } cset('thumbs',{f:FOLDER,t:Date.now(),m:N}); }
+      catch(e){ console.warn('küçük resim yenileme',e); THC=old; } },4000); }
   }catch(e){ console.error(e); fail(String(e.message||e)); $b('bootLogin').hidden=!!tok; }
 })();
 $b('bootLogin').onclick=()=>login('select_account');
@@ -753,7 +765,8 @@ $('#subcats').addEventListener('click',e=>{ if(e.target.closest('[data-more]')){
 function cardHTML(p){
   const f=p.f[0]; const badge=p.f.length>1?`<span class="badge">▦ ${p.f.length}</span>`:(f&&isVid(f)?'<span class="badge">▶ Video</span>':'');
   const th=f?(TH(f)||(p.pv?(p.pv.startsWith('data:')?p.pv:TH(p.pv)):'')):'';
-  const m=!f?'<div class="missing">Dosya yok</div>':th?`<img src="${th}" loading="lazy" alt="">`:`<div class="missing">${isVid(f)?'▶ Video':'Önizleme yok'}</div>`;
+  const tr=(f&&isVid(f)&&p.pv&&!p.pv.startsWith('data:'))?p.pv:f;
+  const m=!f?'<div class="missing">Dosya yok</div>':th?`<img src="${th}" data-r="${String(tr).replace(/"/g,'&quot;')}" loading="lazy" alt="">`:`<div class="missing">${isVid(f)?'▶ Video':'Önizleme yok'}</div>`;
   const a=assigned(p.c), mt=note(p.c);
   const tags=a.slice(0,3).map(id=>`<span class="ctag"><i style="background:${color(id)}"></i>${esc(N(id).name)}</span>`).join('')+(a.length>3?`<span class="ctag">+${a.length-3}</span>`:'')+(mt.tags||[]).slice(0,3).map(t=>`<span class="ctag user">#${esc(t)}</span>`).join('')+(mt.note?'<span class="ctag user">📝</span>':'');
   return `<span class="check">✓</span><div class="thumb">${m}${badge}</div><div class="meta"><div class="who"><b>@${esc(p.u)}</b><span>${ACCS.length>1&&p.a!==ACCS[0]?'◆ ':''}${p.y}</span></div>${p.cap?`<p class="cap">${esc(p.cap.slice(0,220))}</p>`:''}${tags?`<div class="ctags">${tags}</div>`:''}</div>`;
@@ -761,7 +774,7 @@ function cardHTML(p){
 function more(){ const fr=document.createDocumentFragment();
   const grid=$('#grid'); list.slice(shown,shown+PAGE).forEach(p=>{ if(grid.querySelector(`.card[data-c="${CSS.escape(p.c)}"]`)) return; const el=document.createElement('article'); el.className='card'+(picked.has(p.c)?' picked':''); el.tabIndex=0; el.draggable=true; el.dataset.c=p.c; el.innerHTML=cardHTML(p); fr.appendChild(el);});
   shown+=PAGE; $('#grid').appendChild(fr);
-  $('#grid').querySelectorAll('img:not([data-e])').forEach(m=>{m.dataset.e=1;m.addEventListener('error',()=>{m.parentElement.querySelector('img')?.replaceWith(Object.assign(document.createElement('div'),{className:'missing',textContent:'Dosya bulunamadı'}))},{once:true})}); }
+  $('#grid').querySelectorAll('img:not([data-e])').forEach(m=>{m.dataset.e=1;m.addEventListener('error',function h(){ if(m.dataset.r&&!m.dataset.fb){ m.dataset.fb='1'; const u=window.__G.alt(m.dataset.r); if(u&&u!==m.src){ m.src=u; m.addEventListener('error',h,{once:true}); return; } } m.parentElement.querySelector('img')?.replaceWith(Object.assign(document.createElement('div'),{className:'missing',textContent:'Dosya bulunamadı'}))},{once:true})}); }
 new IntersectionObserver(e=>{if(e[0].isIntersecting&&shown<list.length) more()},{root:$('#main'),rootMargin:'1200px'}).observe($('#sentinel'));
 const peekURL = f => window.__G ? window.__G.full(f) : Promise.resolve(enc(f));
 let peekT=null, peekCode=null, hoverCard=null, suppressClick=false;
