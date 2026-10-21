@@ -419,15 +419,22 @@ const T0=performance.now(), TM=[]; const mark=(k,extra)=>TM.push([k,((performanc
 const PG={};
 function showTiming(){ const box=document.createElement('div'); box.id='olcum';
   box.style.cssText='position:fixed;left:8px;right:8px;bottom:8px;z-index:60;background:var(--panel);color:var(--ink);border:2px solid var(--accent);border-radius:12px;padding:10px 12px;font:13px/1.45 system-ui;box-shadow:var(--shadow);max-height:55vh;overflow:auto';
-  const pg=Object.entries(PG).map(([k,v])=>`${k}: ${v.n} sayfa, ${v.f} dosya, ${v.s.toFixed(1)} sn`).join('<br>');
+  const pg=Object.entries(PG).map(([k,v])=>`${k}: ${v.n} sayfa, ${v.f} dosya, ${v.s.toFixed(1)} sn${v.v?' — biçim: '+v.v:''}${v.skip?' — atlanan: '+v.skip.join(', '):''}`).join('<br>');
   box.innerHTML=`<b>Açılış süresi ölçümü</b> <span style="color:var(--muted)">(${navigator.connection?.effectiveType||'?'} bağlantı)</span><br>`+TM.map(([k,s,e])=>`${s} sn — ${k}${e?' ('+e+')':''}`).join('<br>')+(pg?'<br><b>Liste ayrıntısı</b><br>'+pg:'')+
     `<br><span style="color:var(--muted)">Ekran görüntüsünü alıp Claude'a gönder.</span> <button style="float:right;border:0;background:var(--accent);color:var(--accent-ink);border-radius:8px;padding:4px 12px">Kapat</button>`;
   box.querySelector('button').onclick=()=>box.remove(); document.body.appendChild(box); }
 async function list(rel,onPage){ const ps=performance.now(); PG[rel]={n:0,f:0,s:0};
   const base=`/me/drive/root:/${FP}/${encPath(rel)}:/children?$top=1000`;
-  const tries=[base+'&$select=id,name,file,@microsoft.graph.downloadUrl&$expand=thumbnails($select=large)', base+'&$expand=thumbnails'];
-  let url=null;
-  for(const u of tries){ const r=await graph(u); if(r.ok){ const j=await r.json(); const files=(j.value||[]).filter(it=>it.file); if(u!==tries.at(-1)&&files.length&&!files.some(it=>it.thumbnails?.length)) continue; url=u; await take(j); break; } if(r.status===404) return; if(r.status!==400) throw new Error(rel+' listelenemedi ('+r.status+')'); }
+  // hafiften ağıra: önce yalnızca gereken alanlar; işe yarayan biçim bu cihazda hatırlanır
+  const V=[['seçili alanlar + büyük resim','&$select=id,name,file,@microsoft.graph.downloadUrl&$expand=thumbnails($select=large)'],
+           ['yalnız büyük resim','&$expand=thumbnails($select=large)'],
+           ['tam liste','&$expand=thumbnails']];
+  const pref=ls.get('igweb.listv',null); const order=[0,1,2]; if(pref!=null&&V[pref]){ order.splice(order.indexOf(pref),1); order.unshift(pref); }
+  const ok=files=>!files.length||(files.some(it=>it.thumbnails?.length)&&files.some(it=>it['@microsoft.graph.downloadUrl']||it['@content.downloadUrl']));
+  for(const vi of order){ const u=base+V[vi][1]; const r=await graph(u);
+    if(r.ok){ const j=await r.json(); const files=(j.value||[]).filter(it=>it.file); if(vi!==2&&!ok(files)){ (PG[rel].skip=PG[rel].skip||[]).push(V[vi][0]); continue; }
+      PG[rel].v=V[vi][0]; if(files.length) ls.set('igweb.listv',vi); await take(j); break; }
+    if(r.status===404) return; if(r.status!==400) throw new Error(rel+' listelenemedi ('+r.status+')'); (PG[rel].skip=PG[rel].skip||[]).push(V[vi][0]+' reddedildi'); }
   async function take(j){ const t=Date.now(); PG[rel].n++; PG[rel].f+=(j.value||[]).filter(x=>x.file).length; PG[rel].s=(performance.now()-ps)/1000;
     for(const it of j.value||[]){ if(!it.file) continue; const th=it.thumbnails?.[0]?.large?.url||it.thumbnails?.[0]?.medium?.url||'';
       const dl=it['@microsoft.graph.downloadUrl']||it['@content.downloadUrl']||'';
