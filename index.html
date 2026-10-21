@@ -19,10 +19,10 @@
 }
 *{box-sizing:border-box}
 [hidden]{display:none!important}
-html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+html,body{margin:0;height:100%;overscroll-behavior:none;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer}
-.app{display:grid;grid-template-columns:300px 1fr;grid-template-rows:auto 1fr;height:100vh}
+.app{display:grid;grid-template-columns:300px 1fr;grid-template-rows:auto 1fr;height:100vh;height:100dvh}
 header{grid-column:1/-1;border-bottom:1px solid var(--line);background:var(--bg);padding:12px 18px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 h1{font:600 22px/1.1 Georgia,"Times New Roman",serif;margin:0 8px 0 0;white-space:nowrap}
 .search{flex:1 1 240px;display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:0 12px;height:38px}
@@ -73,7 +73,7 @@ aside.side{border-right:1px solid var(--line);background:var(--side);overflow:au
 .tagbtn small{color:var(--muted)}
 .sep{height:1px;background:var(--line);margin:12px 6px}
 /* main */
-main{overflow:auto;position:relative}
+main{overflow:auto;position:relative;overscroll-behavior:contain;overflow-anchor:none;-webkit-overflow-scrolling:touch}
 .crumbs{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:14px 20px 0;font-size:14px;color:var(--muted)}
 .crumbs button{border:0;background:transparent;color:var(--muted);padding:2px 4px;border-radius:6px}
 .crumbs button:hover{color:var(--ink);background:var(--chip)}
@@ -178,7 +178,8 @@ body.filedrag::after{content:'Dosyaları buraya bırak → kataloğa ekle';posit
 #media{touch-action:pan-y}
 .sidecount-trash{color:var(--danger)}
 @media (max-width:900px){
-  .app{grid-template-columns:1fr}
+  .app{grid-template-columns:1fr;grid-template-rows:1fr}
+  main{padding-top:var(--hh,54px)}
   aside.side{position:fixed;inset:0 25% 0 0;z-index:30;transform:translateX(-105%);transition:transform .2s;box-shadow:var(--shadow)}
   .app.sideopen aside.side{transform:none}
   .sidetoggle{display:inline-flex}
@@ -188,7 +189,7 @@ body.filedrag::after{content:'Dosyaları buraya bırak → kataloğa ekle';posit
   .card .cap,.card .ctags,.card .who span{display:none}
   .card .who{font-size:11px}
   .badge{top:5px;right:5px;font-size:10px;padding:2px 6px}
-  header{flex-wrap:nowrap;position:relative;padding:8px 10px}
+  header{flex-wrap:nowrap;position:fixed;top:0;left:0;right:0;z-index:20;padding:8px 10px;transition:transform .22s ease;will-change:transform}
   header h1{font-size:19px;flex:1;overflow:hidden;text-overflow:ellipsis}
   #filtBtn,#saveBtnM{display:inline-flex}
   #saveBtnM{padding:0 10px}
@@ -196,7 +197,7 @@ body.filedrag::after{content:'Dosyaları buraya bırak → kataloğa ekle';posit
   header.open .hctl{display:flex}
   .hctl .search{flex:1 1 100%}
   .hctl select{max-width:none;flex:1 1 45%}
-  .app.hdrhide header{display:none}
+  .app.hdrhide header{transform:translateY(-100%)}
   .subcats{padding:8px 8px 0;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
   .subcats::-webkit-scrollbar{display:none}
   .subcat{flex:none;padding:5px 10px;font-size:13px}
@@ -993,8 +994,15 @@ $('#type').onchange=e=>{ui.type=e.target.value; saveUI(); renderView();};
 const isMob=()=>matchMedia('(max-width:900px)').matches;
 $('#filtBtn').onclick=e=>{ e.stopPropagation(); const h=document.querySelector('header'); const o=!h.classList.contains('open'); h.classList.toggle('open',o); $('#filtBtn').setAttribute('aria-expanded',o); };
 document.addEventListener('click',e=>{ if(isMob()&&!e.target.closest('header')&&!e.target.closest('dialog')) document.querySelector('header').classList.remove('open'); });
-{ let lastY=0; $('#main').addEventListener('scroll',()=>{ if(!isMob()) return; const y=$('#main').scrollTop; const app=$('#app');
-  if(y>lastY+8&&y>90){ app.classList.add('hdrhide'); document.querySelector('header').classList.remove('open'); } else if(y<lastY-8||y<40) app.classList.remove('hdrhide'); lastY=y; },{passive:true}); }
+{ const hd=document.querySelector('header'), app=$('#app'), mn=$('#main');
+  const setHH=()=>document.documentElement.style.setProperty('--hh',hd.offsetHeight+'px');
+  setHH(); addEventListener('resize',setHH); if(window.ResizeObserver) new ResizeObserver(setHH).observe(hd);
+  // hide header only after a deliberate scroll; header is an overlay so hiding it never moves the content
+  let lastY=0, acc=0, raf=0;
+  mn.addEventListener('scroll',()=>{ if(raf) return; raf=requestAnimationFrame(()=>{ raf=0; if(!isMob()) return; const y=mn.scrollTop, d=y-lastY; lastY=y;
+    if(hd.classList.contains('open')||y<60){ acc=0; app.classList.remove('hdrhide'); return; }
+    acc=(Math.sign(d)===Math.sign(acc))?acc+d:d;
+    if(acc>60) app.classList.add('hdrhide'); else if(acc<-60) app.classList.remove('hdrhide'); }); },{passive:true}); }
 // touch swipe in the viewer (carousel like Instagram; at the ends → next/previous post)
 { let tx=null,ty=null; $('#stage').addEventListener('touchstart',e=>{ if(e.touches.length!==1){tx=null;return;} tx=e.touches[0].clientX; ty=e.touches[0].clientY; },{passive:true});
   $('#stage').addEventListener('touchend',e=>{ if(tx==null) return; const t=e.changedTouches[0], dx=t.clientX-tx, dy=t.clientY-ty; tx=null;
