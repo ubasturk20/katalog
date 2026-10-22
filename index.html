@@ -526,6 +526,7 @@ const TH = rel => window.__G.th(rel); const BLANK='data:image/gif;base64,R0lGODl
 const coll = new Intl.Collator('tr',{sensitivity:'base',numeric:true});
 const low = s => s.toLocaleLowerCase('tr');
 const typeLabel = {image:'Fotoğraf', video:'Video', carousel:'Carousel'};
+const uname = p => p.src ? p.u : '@'+p.u;
 const fmtDate = t => t ? new Date(t+'T00:00:00').toLocaleDateString('tr-TR',{day:'numeric',month:'long',year:'numeric'}) : '';
 const COLORS = ['#b5651d','#8a5a2b','#c0392b','#d35400','#c9a227','#6b8e23','#2e7d32','#00897b','#1e88e5','#3949ab','#8e24aa','#d81b60','#6d6d6d'];
 const BY = {}; DATA.forEach((p,i)=>{p.i=i; p.y=p.t.slice(0,4); BY[p.c]=p;});
@@ -769,7 +770,7 @@ function cardHTML(p){
   const m=!f?'<div class="missing">Dosya yok</div>':th?`<img src="${th}" data-r="${String(tr).replace(/"/g,'&quot;')}" loading="lazy" alt="">`:`<div class="missing">${isVid(f)?'▶ Video':'Önizleme yok'}</div>`;
   const a=assigned(p.c), mt=note(p.c);
   const tags=a.slice(0,3).map(id=>`<span class="ctag"><i style="background:${color(id)}"></i>${esc(N(id).name)}</span>`).join('')+(a.length>3?`<span class="ctag">+${a.length-3}</span>`:'')+(mt.tags||[]).slice(0,3).map(t=>`<span class="ctag user">#${esc(t)}</span>`).join('')+(mt.note?'<span class="ctag user">📝</span>':'');
-  return `<span class="check">✓</span><div class="thumb">${m}${badge}</div><div class="meta"><div class="who"><b>@${esc(p.u)}</b><span>${ACCS.length>1&&p.a!==ACCS[0]?'◆ ':''}${p.y}</span></div>${p.cap?`<p class="cap">${esc(p.cap.slice(0,220))}</p>`:''}${tags?`<div class="ctags">${tags}</div>`:''}</div>`;
+  return `<span class="check">✓</span><div class="thumb">${m}${badge}</div><div class="meta"><div class="who"><b>${esc(uname(p))}</b><span>${ACCS.length>1&&p.a!==ACCS[0]?'◆ ':''}${p.y}</span></div>${p.cap?`<p class="cap">${esc(p.cap.slice(0,220))}</p>`:''}${tags?`<div class="ctags">${tags}</div>`:''}</div>`;
 }
 function more(){ const fr=document.createDocumentFragment();
   const grid=$('#grid'); list.slice(shown,shown+PAGE).forEach(p=>{ if(grid.querySelector(`.card[data-c="${CSS.escape(p.c)}"]`)) return; const el=document.createElement('article'); el.className='card'+(picked.has(p.c)?' picked':''); el.tabIndex=0; el.draggable=true; el.dataset.c=p.c; el.innerHTML=cardHTML(p); fr.appendChild(el);});
@@ -779,7 +780,7 @@ new IntersectionObserver(e=>{if(e[0].isIntersecting&&shown<list.length) more()},
 const peekURL = f => window.__G ? window.__G.full(f) : Promise.resolve(enc(f));
 let peekT=null, peekCode=null, hoverCard=null, suppressClick=false;
 function showPeek(card){ const p=BY[card.dataset.c]; if(!p||!p.f[0]) return; const f=p.f[0], vid=isVid(f), pk=$('#peek'); const th=card.querySelector('.thumb img')?.src||'';
-  pk.innerHTML=`<div class="pk">${vid?`<video muted loop playsinline ${th?`poster="${th}"`:''}></video>`:`<img src="${th}" alt="">`}<div class="pkm"><b>@${esc(p.u)}</b> · ${typeLabel[p.m]||''}${p.f.length>1?' · '+p.f.length+' görsel':''}</div></div>`;
+  pk.innerHTML=`<div class="pk">${vid?`<video muted loop playsinline ${th?`poster="${th}"`:''}></video>`:`<img src="${th}" alt="">`}<div class="pkm"><b>${esc(uname(p))}</b> · ${typeLabel[p.m]||''}${p.f.length>1?' · '+p.f.length+' görsel':''}</div></div>`;
   pk.hidden=false; peekCode=p.c; const el=pk.querySelector('img,video');
   peekURL(f).then(u=>{ if(peekCode!==p.c||!u) return; el.src=u; if(vid) el.play?.().catch(()=>{}); }); }
 function hidePeek(){ clearTimeout(peekT); peekT=null; peekCode=null; const pk=$('#peek'); if(!pk.hidden){ pk.hidden=true; pk.innerHTML=''; } }
@@ -840,11 +841,11 @@ function renderLb(){ const p=BY[curCode]; const f=p.f[idx];
   if(f) window.__G.full(f).then(u=>{ if(curCode+'|'+idx!==want||!el.isConnected) return; if(!u){ if(!th) $('#media').innerHTML='<div class="missing" style="width:320px;color:#ddd;text-align:center">Dosya OneDrive\'da bulunamadı</div>'; return; } el.src=u; $('#lbFile').href=u; });
   el?.addEventListener?.('error',()=>{$('#media').innerHTML=`<div class="missing" style="width:320px;color:#ddd;text-align:center">${f&&isVid(f)?'Video bu tarayıcıda oynatılamadı.<br>“Dosyayı aç” ile varsayılan oynatıcıda açabilirsin.':'Dosya bulunamadı'}</div>`});
   $('#prev').hidden=$('#next').hidden=p.f.length<2; $('#dots').innerHTML=p.f.length>1?p.f.map((_,j)=>`<i class="${j===idx?'on':''}"></i>`).join(''):'';
-  $('#lbUser').textContent='@'+p.u; $('#lbDate').textContent=[fmtDate(p.t),typeLabel[p.m],p.f.length>1?`${idx+1}/${p.f.length}`:''].filter(Boolean).join(' · ');
+  $('#lbUser').textContent=uname(p); $('#lbDate').textContent=[fmtDate(p.t),typeLabel[p.m],p.f.length>1?`${idx+1}/${p.f.length}`:''].filter(Boolean).join(' · ');
   renderLbMeta();
-  $('#lbLink').href='https://www.instagram.com/p/'+(p.sc||p.c)+'/'; $('#lbFile').href='#'; $('#lbName').textContent=f?f.split('/').pop():'';
+  $('#lbLink').href=p.url||('https://www.instagram.com/p/'+(p.sc||p.c)+'/'); $('#lbLink').textContent=p.url?'Kaynağı aç ↗':(p.src?'':'Instagram\'da aç ↗'); $('#lbFile').href='#'; $('#lbName').textContent=f?f.split('/').pop():'';
   $('#lbCap').textContent=p.cap||'(Açıklama yok)'; $('#lbIg').textContent=p.custom?('Bilgisayardan eklendi · '+new Date(p.added).toLocaleString('tr-TR')):('Kaydeden hesap: '+p.a+' · '+(p.ig.length?'Instagram koleksiyonu: '+p.ig.join(', '):'Instagram\'da koleksiyonsuz'));
-  $('#lbLink').hidden=!!p.custom; $('#lbDel').textContent=isDel(p.c)?'↺ Geri yükle':'🗑 Sil';
+  $('#lbLink').hidden=!!p.custom||(!!p.src&&!p.url); $('#lbDel').textContent=isDel(p.c)?'↺ Geri yükle':'🗑 Sil';
   $('#pPrev').disabled=cur<=0; $('#pNext').disabled=cur<0||cur>=list.length-1; }
 function renderLbMeta(){ const c=curCode, m=note(c);
   $('#lbCats').innerHTML=assigned(c).map(id=>`<span class="cchip"><i style="background:${color(id)}"></i>${esc(pathStr(id))}<button data-rm="${id}" title="Kaldır">✕</button></span>`).join('')+`<button class="btn sm" id="lbAdd">＋ Kategori</button>`;
