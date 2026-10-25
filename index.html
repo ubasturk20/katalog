@@ -862,7 +862,12 @@ function renderLb(){ const p=BY[curCode]; const f=p.f[idx];
   $('#lbLink').href=mp.url||('https://www.instagram.com/p/'+(mp.sc||mp.c)+'/'); $('#lbLink').textContent=mp.url?'Kaynağı aç ↗':(mp.src?'':'Instagram\'da aç ↗'); $('#lbFile').href='#'; $('#lbName').textContent=f?f.split('/').pop():'';
   $('#lbCap').textContent=mp.cap||p.cap||'(Açıklama yok)'; $('#lbIg').textContent=p.custom?('Bilgisayardan eklendi · '+new Date(p.added).toLocaleString('tr-TR')):('Kaydeden hesap: '+p.a+' · '+(p.ig.length?'Instagram koleksiyonu: '+p.ig.join(', '):'Instagram\'da koleksiyonsuz'));
   $('#lbLink').hidden=!!mp.custom||(!!mp.src&&!mp.url); $('#lbUngroup').hidden=!p.grp; $('#lbDel').textContent=isDel(p.c)?'↺ Geri yükle':'🗑 Sil';
-  if(mp.embed&&(!p.parts||mp.f.includes(f))){ $('#media').innerHTML=`<iframe src="${esc(mp.embed)}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen style="display:block;border:0;background:#000;${mp.ev?'height:min(80vh,760px);aspect-ratio:9/16;max-width:92vw':'width:min(92vw,960px);aspect-ratio:16/9;max-height:80vh'}"></iframe>`; }
+  if(mp.embed&&(!p.parts||mp.f.includes(f))){ const fb=/facebook\.com/.test(mp.embed), site=fb?'Facebook':'YouTube';
+    const frame=()=>`<iframe src="${esc(mp.embed)}" referrerpolicy="strict-origin-when-cross-origin" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen style="display:block;border:0;background:#000;${mp.ev?'height:min(78vh,760px);aspect-ratio:9/16;max-width:92vw':'width:min(92vw,960px);aspect-ratio:16/9;max-height:78vh'}"></iframe>`;
+    const ov=`<div class="embov" style="position:absolute;left:0;right:0;bottom:14px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;z-index:3"><a class="btn primary" href="${esc(mp.url||'#')}" target="_blank" rel="noopener">▶ ${site}'ta izle ↗</a>${fb?'<button class="btn" data-embtry="1">Burada oynatmayı dene</button>':''}</div>`;
+    $('#media').style.position='relative';
+    if(fb){ $('#media').insertAdjacentHTML('beforeend',ov); $('#media').querySelector('[data-embtry]').onclick=()=>{ $('#media').innerHTML=frame()+ov.replace(/<button[^>]*>.*?<\/button>/,''); }; }
+    else $('#media').innerHTML=frame()+ov; }
   $('#pPrev').disabled=cur<=0; $('#pNext').disabled=cur<0||cur>=list.length-1; }
 function renderLbMeta(){ const c=curCode, m=note(c);
   $('#lbCats').innerHTML=assigned(c).map(id=>`<span class="cchip"><i style="background:${color(id)}"></i>${esc(pathStr(id))}<button data-rm="${id}" title="Kaldır">✕</button></span>`).join('')+`<button class="btn sm" id="lbAdd">＋ Kategori</button>`;
