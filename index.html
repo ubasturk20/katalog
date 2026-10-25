@@ -56,6 +56,9 @@ aside.side{border-right:1px solid var(--line);background:var(--side);overflow:au
 .caret{width:18px;height:18px;border:0;background:transparent;color:var(--muted);font-size:11px;flex:none;padding:0}
 .caret.leaf{visibility:hidden}
 .dot{width:9px;height:9px;border-radius:3px;flex:none;background:var(--muted)}
+.clamp{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.capsec{display:flex;flex-direction:column;align-items:flex-start;gap:2px}
+.linkbtn{border:0;background:none;color:var(--accent);padding:2px 0;font-weight:600;font-size:13px;cursor:pointer}
 .nname{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px}
 #tree .nname{font-size:16px}
 #tree .node{padding:6px 6px}
@@ -331,6 +334,7 @@ body.filedrag::after{content:'Dosyaları buraya bırak → kataloğa ekle';posit
     </div>
     <div class="lside">
       <div><h2 id="lbUser"></h2><div class="sub" id="lbDate"></div></div>
+      <section class="capsec"><div class="full clamp" id="lbCap"></div><button class="linkbtn" id="capMore" hidden>Devamını oku ▾</button></section>
       <section><h3>Kategoriler</h3><div class="chips" id="lbCats"></div></section>
       <section id="lbSugWrap"><h3>Önerilen kategoriler</h3><div class="chips" id="lbSug"></div></section>
       <section><h3>Etiketler</h3><div class="chips" id="lbTags"></div>
@@ -338,7 +342,6 @@ body.filedrag::after{content:'Dosyaları buraya bırak → kataloğa ekle';posit
       <section><h3>Notum</h3><textarea class="note" id="lbNote" placeholder="Bu gönderiyle ilgili notun…"></textarea></section>
       <div class="row"><a class="btn primary sm" id="lbLink" target="_blank" rel="noopener">Instagram'da aç ↗</a><a class="btn sm" id="lbFile" target="_blank">Dosyayı aç</a><button class="btn sm" id="lbDel">🗑 Sil</button><button class="btn sm" id="lbUngroup" hidden title="Grubu çözüp gönderileri yeniden ayrı göster">▦ Grubu çöz</button></div>
       <div class="fname" id="lbName"></div>
-      <section><h3>Açıklama</h3><div class="full" id="lbCap"></div></section>
       <div class="sub" id="lbIg"></div>
       <div class="postnav"><button class="btn" id="pPrev">← Önceki</button><button class="btn" id="pNext">Sonraki →</button></div>
     </div>
@@ -872,7 +875,7 @@ function renderLb(){ const p=BY[curCode]; const f=p.f[idx];
   const mp=memberAt(p,idx); $('#lbUser').textContent=uname(mp); $('#lbDate').textContent=[fmtDate(p.t),typeLabel[p.m],p.f.length>1?`${idx+1}/${p.f.length}`:''].filter(Boolean).join(' · ');
   renderLbMeta();
   $('#lbLink').href=mp.url||('https://www.instagram.com/p/'+(mp.sc||mp.c)+'/'); $('#lbLink').textContent=mp.url?'Kaynağı aç ↗':(mp.src?'':'Instagram\'da aç ↗'); $('#lbFile').href='#'; $('#lbName').textContent=f?f.split('/').pop():'';
-  $('#lbCap').textContent=mp.cap||p.cap||'(Açıklama yok)'; $('#lbIg').textContent=p.custom?('Bilgisayardan eklendi · '+new Date(p.added).toLocaleString('tr-TR')):('Kaydeden hesap: '+p.a+' · '+(p.ig.length?'Instagram koleksiyonu: '+p.ig.join(', '):'Instagram\'da koleksiyonsuz'));
+  $('#lbCap').textContent=mp.cap||p.cap||'(Açıklama yok)'; $('#lbCap').classList.add('clamp'); $('#capMore').textContent='Devamını oku ▾'; requestAnimationFrame(()=>{ const c=$('#lbCap'); $('#capMore').hidden=c.scrollHeight<=c.clientHeight+2; }); $('#lbIg').textContent=p.custom?('Bilgisayardan eklendi · '+new Date(p.added).toLocaleString('tr-TR')):('Kaydeden hesap: '+p.a+' · '+(p.ig.length?'Instagram koleksiyonu: '+p.ig.join(', '):'Instagram\'da koleksiyonsuz'));
   $('#lbLink').hidden=!!mp.custom||(!!mp.src&&!mp.url); $('#lbUngroup').hidden=!p.grp; $('#lbDel').textContent=isDel(p.c)?'↺ Geri yükle':'🗑 Sil';
   if(mp.embed&&(!p.parts||mp.f.includes(f))){ const fb=/facebook\.com/.test(mp.embed), site=fb?'Facebook':'YouTube';
     const frame=()=>`<iframe src="${esc(mp.embed)}" referrerpolicy="strict-origin-when-cross-origin" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen style="display:block;border:0;background:#000;${mp.ev?'height:min(78vh,760px);aspect-ratio:9/16;max-width:92vw':'width:min(92vw,960px);aspect-ratio:16/9;max-height:78vh'}"></iframe>`;
@@ -981,6 +984,7 @@ $('#addGo').onclick=async()=>{
 function setDeleted(keys,on){ keys=expandG(keys); snapshot(); cat.deleted=cat.deleted||{}; const t=new Date().toISOString(); keys.forEach(k=>{ if(on) cat.deleted[k]=t; else delete cat.deleted[k]; }); changed(); }
 $('#lbUngroup').onclick=()=>{ const p=BY[curCode]; if(!p||!p.grp) return; const first=p.members[0]; snapshot(); const G={...groupsOf()}; delete G[p.grp]; cat.meta[GK]=G; changed();
   cur=list.findIndex(x=>x.c===first); curCode=first; idx=0; if(cur<0){ lb.close(); } else renderLb(); toast('Grup çözüldü'); };
+$('#capMore').onclick=()=>{ const open=$('#lbCap').classList.toggle('clamp'); $('#capMore').textContent=open?'Devamını oku ▾':'Daha az ▴'; };
 $('#lbDel').onclick=async()=>{ const p=BY[curCode]; if(!p) return; const k0=list.findIndex(x=>x.c===p.c);
   if(isDel(p.c)){ setDeleted([p.c],false); toast('Geri yüklendi'); }
   else { const v=await ask({title:'Bu gönderi silinsin mi?',body:'Gönderi katalogdan kaldırılır ve <b>🗑 Silinenler</b> bölümüne gider; oradan geri yükleyebilirsin. Dosyaları diskte durur.',buttons:[{label:'Vazgeç',v:null},{label:'Sil',v:1,cls:'primary'}]}); if(!v) return; setDeleted([p.c],true); toast('Silindi — 🗑 Silinenler\'den geri alabilirsin'); }
