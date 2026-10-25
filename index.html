@@ -57,6 +57,9 @@ aside.side{border-right:1px solid var(--line);background:var(--side);overflow:au
 .caret.leaf{visibility:hidden}
 .dot{width:9px;height:9px;border-radius:3px;flex:none;background:var(--muted)}
 .nname{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px}
+#tree .nname{font-size:16px}
+#tree .node{padding:6px 6px}
+.sidetop{display:none}
 .ncount{font-size:12px;color:var(--muted);flex:none}
 .nact{display:none;gap:2px;flex:none}
 .node:hover .nact,.node.sel .nact{display:flex}
@@ -182,6 +185,9 @@ body.filedrag::after{content:'Dosyaları buraya bırak → kataloğa ekle';posit
   main{padding-top:var(--hh,54px)}
   aside.side{position:fixed;inset:0 25% 0 0;z-index:30;transform:translateX(-105%);transition:transform .2s;box-shadow:var(--shadow)}
   .app.sideopen aside.side{transform:none}
+  .sidetop{display:flex;justify-content:flex-start;position:sticky;top:-12px;z-index:2;background:var(--side);margin:-12px -10px 8px;padding:10px}
+  #sideClose{font-size:16px;padding:6px 14px}
+  #tree .nname{font-size:17px}
   .sidetoggle{display:inline-flex}
   .grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;padding:8px 8px 100px}
   .card{border-radius:10px}
@@ -241,6 +247,7 @@ body.filedrag::after{content:'Dosyaları buraya bırak → kataloğa ekle';posit
 </header>
 
 <aside class="side" id="side">
+  <div class="sidetop"><button class="btn" id="sideClose" aria-label="Menüyü kapat">← Kapat</button></div>
   <ul class="tree special" id="special"></ul>
   <div class="sep"></div>
   <div class="sideh"><b>Kategoriler</b><button class="btn sm" id="addRoot" title="Yeni ana kategori">＋ Ana kategori</button></div>
@@ -490,8 +497,13 @@ window.__G={full,putCatalog,fetchCatalog,MAP,folder:FOLDER,
     const thc=await cget('thumbs'); if(thc&&thc.f===FOLDER&&thc.m) THC=thc.m; const thAge=thc?Date.now()-(thc.t||0):1e15;
     const total=veri.d.files||9000; let n=0;
     const tick=()=>{ n=Object.values(PG).reduce((s,v)=>s+v.f,0); msg(`Dosyalar listeleniyor… ${n.toLocaleString('tr-TR')} / ${total.toLocaleString('tr-TR')}`,.15+.75*Math.min(1,n/total)); };
-    await Promise.all(['media','media/_kapak','media/eklenen',...BK].map(f=>list(f,tick)));
-    mark('Dosya listesi tamam',Object.values(PG).reduce((s,v)=>s+v.f,0)+' dosya'); msg('Düzenlemeler okunuyor…',.95);
+    // son 50 dakika içinde alınmış liste bu cihazda varsa onu kullan (bağlantılar hâlâ geçerli) -> anında açılış
+    const mc=await cget('mapc'); let fromCache=false;
+    if(mc&&mc.f===FOLDER&&mc.m&&Date.now()-mc.t<50*60e3){ for(const k in mc.m){ const o={...mc.m[k],th:THC[k]||''}; MAP[k]=o; const d=k.slice(0,k.lastIndexOf('/')); if(BK.includes(d)){ const ka=d.slice(0,d.lastIndexOf('/'))+k.slice(d.length); if(!MAP[ka]?.id) MAP[ka]=o; } } fromCache=true; }
+    else { await Promise.all(['media','media/_kapak','media/eklenen',...BK].map(f=>list(f,tick)));
+      const phys={}; for(const k in MAP){ const d=k.slice(0,k.lastIndexOf('/')); const o=MAP[k]; if(BK.includes(d)||MAP[k]!==MAP[BK.find(b=>MAP[b+k.slice(d.length)]===o)+k.slice(d.length)]) phys[k]={id:o.id,dl:o.dl,t:o.t}; }
+      cset('mapc',{f:FOLDER,t:Date.now(),m:phys}); }
+    mark(fromCache?'Dosya listesi bu cihazdan (son 50 dk)':'Dosya listesi tamam',fromCache?Object.keys(mc.m).length+' kayıt':Object.values(PG).reduce((s,v)=>s+v.f,0)+' dosya'); msg('Düzenlemeler okunuyor…',.95);
     const remote=await fetchCatalog();
     mark('Düzenlemeler (katalog.json) okundu');
     const KEY='igkatalog.v1'; const local=ls.get(KEY,null), dirty=ls.get('igkatalog.dirty',false);
@@ -632,7 +644,7 @@ function renderTree(){
       <button class="caret ${ch?'':'leaf'}" data-act="toggle" aria-label="Aç/kapat">${open?'▾':'▸'}</button>
       <span class="dot" style="background:${color(n.id)}"></span>
       <span class="nname" title="${esc(pathStr(n.id))}">${esc(n.name)}</span><span class="ncount">${total[n.id]||0}</span>
-      <span class="nact"><button data-act="add" title="Alt kategori ekle">＋</button><button data-act="ren" title="Yeniden adlandır">✎</button><button data-act="more" title="Diğer">⋯</button></span>
+      <span class="nact"><button data-act="add" title="Alt kategori ekle">＋</button><button data-act="more" title="Diğer">⋯</button></span>
     </div>${ch&&open?`<ul>${build(n.id)}</ul>`:''}</li>`}).join('');
   $('#tree').innerHTML = build('') || '<li class="sub" style="padding:6px;color:var(--muted);font-size:13px">Henüz kategori yok.</li>';
   const tags=Object.entries(tagCount).sort((a,b)=>b[1]-a[1]||coll.compare(a[0],b[0]));
@@ -648,7 +660,7 @@ $('#tree').addEventListener('click',e=>{
   if(act==='more') return nodeMenu(id);
   select(id);
 });
-$('#tree').addEventListener('dblclick',e=>{const row=e.target.closest('.node'); if(row&&!e.target.closest('[data-act]')) rename(row.dataset.id)});
+
 function select(v){ ui.sel=v; subsOpen=false; ui.sort='new'; $('#sort').value='new'; saveUI(); if(v&&N(v)) pathOf(v).slice(0,-1).forEach(n=>ui.open[n.id]=true); renderTree(); renderView(); $('#app').classList.remove('sideopen'); $('#main').scrollTop=0; }
 
 function inlineEdit(id, initial, done){
@@ -1063,11 +1075,13 @@ $('#acc').onchange=e=>{ui.acc=e.target.value; saveUI(); renderView();};
 fillYear();
 $('#year').onchange=e=>{ui.year=e.target.value; saveUI(); renderView();};
 $('#sideToggle').onclick=()=>$('#app').classList.toggle('sideopen');
+$('#sideClose').onclick=()=>$('#app').classList.remove('sideopen');
 window.addEventListener('storage',e=>{ if(e.key!==KEY||!e.newValue) return; try{ const o=JSON.parse(e.newValue); if((o.updated||'')>(cat.updated||'')||(o.savedAt||'')>(cat.savedAt||'')){ staleTab=true; toast('Katalog başka bir sekmede değişti — bu sekmeyi yenile (F5)'); } }catch{} });
 window.addEventListener('beforeunload',e=>{ if(staleTab) return; const cur=LS.get(KEY,null); if(cur&&((cur.updated||'')>(cat.updated||'')||(cur.savedAt||'')>(cat.savedAt||''))) return; LS.set(KEY,cat); });
 
 /* ---------- back button: step back one level, confirm before leaving ---------- */
-{ let armed=false; const arm=()=>{ if(!armed){ history.pushState({ubg:Date.now()},''); armed=true; } };
+{ // Chrome ignores history entries added without a user tap, so the guard is (re)added on the next tap as well
+  let armed=false, tapArmed=false; const arm=tap=>{ if(tap){ if(tapArmed) return; tapArmed=true; } else if(armed) return; history.pushState({ubg:Date.now()},''); armed=true; };
   async function backStep(){
     const dl=[...document.querySelectorAll('dialog[open]')].filter(d=>d.id!=='lb'); if(dl.length){ dl.at(-1).close(); return; }
     if(lb.open){ lb.close(); return; }
@@ -1078,11 +1092,11 @@ window.addEventListener('beforeunload',e=>{ if(staleTab) return; const cur=LS.ge
     if(ui.sel){ const n=N(ui.sel); select(n&&n.parent?n.parent:''); return; }
     if($('#main').scrollTop>200){ $('#main').scrollTo({top:0,behavior:'smooth'}); $('#app').classList.remove('hdrhide'); return; }
     const v=await ask({title:'Katalogdan çıkılsın mı?',body:'Çıkmak istiyorsan <b>Çık</b>\'a bas.',buttons:[{label:'Çık',v:'exit'},{label:'Kal',v:null,cls:'primary'}]});
-    if(v==='exit'){ leaving=true; armed=true; history.back(); setTimeout(()=>{ if(leaving){ leaving=false; armed=false; arm(); toast('Çıkmak için sekmeyi kapatabilirsin'); } },1500); }
+    if(v==='exit'){ leaving=true; armed=true; history.back(); setTimeout(()=>{ if(leaving){ leaving=false; armed=false; tapArmed=false; arm(); toast('Çıkmak için sekmeyi kapatabilirsin'); } },1500); }
   }
   let leaving=false;
-  window.addEventListener('popstate',()=>{ if(leaving){ history.back(); return; } armed=false; arm(); backStep(); });
-  arm(); ['pointerdown','keydown','touchstart'].forEach(t=>document.addEventListener(t,()=>arm(),{capture:true,passive:true})); }
+  window.addEventListener('popstate',()=>{ if(leaving){ history.back(); return; } armed=false; tapArmed=false; arm(); backStep(); });
+  arm(); ['pointerdown','keydown','touchstart'].forEach(t=>document.addEventListener(t,()=>arm(true),{capture:true,passive:true})); }
 
 /* ---------- init ---------- */
 $('#q').value=ui.q; $('#sort').value=ui.sort; $('#type').value=ui.type;
