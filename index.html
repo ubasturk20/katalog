@@ -272,6 +272,17 @@ dialog.lb::backdrop{background:rgba(12,10,8,.62);backdrop-filter:blur(10px);-web
 }
 .close:focus,dialog:focus{outline:none}
 .close:focus-visible{box-shadow:0 0 0 2px rgba(255,255,255,.5)}
+
+/* favoriler */
+.fav{position:absolute;right:8px;bottom:8px;width:34px;height:34px;border-radius:50%;border:1px solid rgba(255,255,255,.18);background:rgba(20,16,12,.38);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);display:grid;place-items:center;padding:0;cursor:pointer;z-index:2}
+.fav svg,.lfav svg{fill:none;stroke:#fff;stroke-width:1.8}
+.fav.on svg,.lfav.on svg{fill:#e5484d;stroke:#e5484d}
+@media (hover:hover){ .card .fav:not(.on){opacity:0;transition:opacity .15s} .card:hover .fav{opacity:1} }
+.lhead{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.lfav{flex:none;width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:transparent;display:grid;place-items:center;padding:0;cursor:pointer}
+.lfav svg{stroke:var(--ink)}
+.lfav.on{border-color:#e5484d}
+@media (max-width:900px){ .fav{width:30px;height:30px;right:6px;bottom:6px} .fav svg{width:16px;height:16px} }
 </style>
 </head>
 <body>
@@ -392,7 +403,7 @@ dialog.lb::backdrop{background:rgba(12,10,8,.62);backdrop-filter:blur(10px);-web
     </div>
     <div class="lside">
       <div class="postnav"><button class="pn" id="pPrev" aria-label="Önceki gönderi">‹ Önceki</button><span class="ppos" id="pPos"></span><button class="pn" id="pNext" aria-label="Sonraki gönderi">Sonraki ›</button></div>
-      <div class="lhead"><h2 id="lbUser"></h2><div class="sub" id="lbDate"></div></div>
+      <div class="lhead"><div><h2 id="lbUser"></h2><div class="sub" id="lbDate"></div></div><button class="lfav" id="lbFav" aria-label="Favorilere ekle" aria-pressed="false"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 20.5s-7.5-4.6-9.6-9.2C.9 7.9 3 4.5 6.4 4.5c2.1 0 3.6 1.2 4.4 2.5h2.4c.8-1.3 2.3-2.5 4.4-2.5 3.4 0 5.5 3.4 4 6.8-2.1 4.6-9.6 9.2-9.6 9.2z"/></svg></button></div>
       <section class="capsec"><div class="full clamp" id="lbCap"></div><button class="linkbtn" id="capMore" hidden>Devamını oku ▾</button></section>
       <section><h3>Kategoriler</h3><div class="chips" id="lbCats"></div></section>
       <div class="row lacts"><a class="btn primary sm" id="lbLink" target="_blank" rel="noopener">Instagram'da aç ↗</a><a class="btn sm" id="lbFile" target="_blank">Dosyayı aç</a><button class="btn sm" id="lbDel">🗑 Sil</button><button class="btn sm" id="lbUngroup" hidden title="Grubu çözüp gönderileri yeniden ayrı göster">▦ Grubu çöz</button></div>
@@ -691,6 +702,11 @@ function syncGroups(){ // user-made groups: shown as one carousel card; members 
     const vp={c:'grp:'+g,grp:g,members:ms.map(p=>p.c),parts:use.map(p=>({c:p.c,n:p.f.length})),sc:f0.sc,a:f0.a,u:f0.u,src:f0.src,url:f0.url,embed:f0.embed,t:f0.t,y:f0.y,m:'carousel',
       cap:o.name||f0.cap,ig:[...new Set(ms.flatMap(p=>p.ig||[]))],f:use.flatMap(p=>p.f),pv:f0.pv,i:Math.min(...ms.map(p=>p.i))};
     ms.forEach(p=>p.inGrp=g); DATA.push(vp); BY[vp.c]=vp; } }
+const FAV='n_favoriler';
+const isFav=c=>assigned(c).includes(FAV);
+function toggleFav(c){ const on=!isFav(c); snapshot(); if(on&&!cat.nodes[FAV]) cat.nodes[FAV]={id:FAV,name:'Favoriler',parent:null,color:'#c0392b'};
+  expandG([c]).forEach(k=>{ const a=(cat.assign[k]||[]).filter(id=>cat.nodes[id]); if(on){ if(!a.includes(FAV)) a.push(FAV); cat.assign[k]=a; } else { const b=a.filter(id=>id!==FAV); if(b.length) cat.assign[k]=b; else delete cat.assign[k]; } });
+  changed(); toast(on?'♥ Favorilere eklendi':'Favorilerden çıkarıldı'); if(lb.open&&curCode) renderLb(); }
 const memberAt=(p,i)=>{ if(!p.parts) return p; for(const x of p.parts){ if(i<x.n) return BY[x.c]||p; i-=x.n; } return p; };
 function normGenel(c){ // posts directly on a category that has sub-categories go into its "Genel" sub-category
   const par=new Set(); for(const id in c.nodes){ const pa=c.nodes[id].parent; if(pa&&c.nodes[pa]) par.add(pa); }
@@ -911,7 +927,7 @@ function cardHTML(p){
   const m=!f?'<div class="missing">Dosya yok</div>':th?`<img src="${th}" data-r="${String(tr).replace(/"/g,'&quot;')}" loading="lazy" alt="">`:`<div class="missing">${isVid(f)?'▶ Video':'Önizleme yok'}</div>`;
   const a=assigned(p.c), mt=note(p.c);
   const tags=a.slice(0,3).map(id=>`<span class="ctag"><i style="background:${color(id)}"></i>${esc(N(id).name)}</span>`).join('')+(a.length>3?`<span class="ctag">+${a.length-3}</span>`:'')+(mt.tags||[]).slice(0,3).map(t=>`<span class="ctag user">#${esc(t)}</span>`).join('')+(mt.note?'<span class="ctag user">📝</span>':'');
-  return `<span class="check">✓</span><div class="thumb">${m}${badge}</div><div class="meta"><div class="who"><b>${esc(uname(p))}</b><span>${ACCS.length>1&&p.a!==ACCS[0]?'◆ ':''}${p.y}</span></div>${p.cap?`<p class="cap">${esc(p.cap.slice(0,220))}</p>`:''}${tags?`<div class="ctags">${tags}</div>`:''}</div>`;
+  return `<span class="check">✓</span><div class="thumb">${m}${badge}<button class="fav ${isFav(p.c)?'on':''}" data-fav="1" aria-label="${isFav(p.c)?'Favorilerden çıkar':'Favorilere ekle'}" aria-pressed="${isFav(p.c)}"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 20.5s-7.5-4.6-9.6-9.2C.9 7.9 3 4.5 6.4 4.5c2.1 0 3.6 1.2 4.4 2.5h2.4c.8-1.3 2.3-2.5 4.4-2.5 3.4 0 5.5 3.4 4 6.8-2.1 4.6-9.6 9.2-9.6 9.2z"/></svg></button></div><div class="meta"><div class="who"><b>${esc(uname(p))}</b><span>${ACCS.length>1&&p.a!==ACCS[0]?'◆ ':''}${p.y}</span></div>${p.cap?`<p class="cap">${esc(p.cap.slice(0,220))}</p>`:''}${tags?`<div class="ctags">${tags}</div>`:''}</div>`;
 }
 function more(){ const fr=document.createDocumentFragment();
   const grid=$('#grid'); list.slice(shown,shown+PAGE).forEach(p=>{ if(grid.querySelector(`.card[data-c="${CSS.escape(p.c)}"]`)) return; const el=document.createElement('article'); el.className='card'+(picked.has(p.c)?' picked':''); el.tabIndex=0; el.draggable=true; el.dataset.c=p.c; el.innerHTML=cardHTML(p); fr.appendChild(el);});
@@ -937,7 +953,7 @@ function refreshCard(c){ const el=document.querySelector(`.card[data-c="${c}"]`)
 
 /* ---------- selection ---------- */
 let lastClick=null;
-$('#grid').addEventListener('click',e=>{ if(suppressClick){ suppressClick=false; return; } hidePeek(); const c=e.target.closest('.card'); if(!c) return; const code=c.dataset.c;
+$('#grid').addEventListener('click',e=>{ const fb=e.target.closest('[data-fav]'); if(fb){ e.stopPropagation(); const cd=fb.closest('.card'); if(cd) toggleFav(cd.dataset.c); return; } if(suppressClick){ suppressClick=false; return; } hidePeek(); const c=e.target.closest('.card'); if(!c) return; const code=c.dataset.c;
   if(selMode||e.ctrlKey||e.metaKey||e.shiftKey){ if(!selMode) toggleSel(true);
     if(e.shiftKey&&lastClick){ const a=list.findIndex(p=>p.c===lastClick), b=list.findIndex(p=>p.c===code); const [s,t]=a<b?[a,b]:[b,a]; list.slice(s,t+1).forEach(p=>picked.add(p.c)); document.querySelectorAll('.card').forEach(x=>x.classList.toggle('picked',picked.has(x.dataset.c))); }
     else { picked.has(code)?picked.delete(code):picked.add(code); c.classList.toggle('picked',picked.has(code)); }
@@ -985,7 +1001,11 @@ function scopeOf(code){ if(ui.sel&&!N(ui.sel)) return null; const a=assigned(cod
   const inView=ui.sel?a.filter(id=>desc(ui.sel).includes(id)):a; const c=(inView.length?inView:a).slice();
   return c.sort((x,y)=>pathOf(y).length-pathOf(x).length)[0]; }
 const nav=()=>navCat&&N(navCat)?list.filter(p=>assigned(p.c).includes(navCat)):list;
-function openPost(code){ navCat=scopeOf(code); cur=nav().findIndex(p=>p.c===code); curCode=code; idx=0; renderLb(); if(!lb.open){ lb.showModal(); anim(lb,[{opacity:0,transform:'translateY(18px) scale(.97)'},{opacity:1,transform:'none'}],320); } $('.lbg').scrollTop=0; }
+// rastgele gezinme: açılan karttan başlayıp kapsamdaki her gönderiye karışık sırayla, her birine bir kez
+let navOrder=[];
+const shuffle=a=>{ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
+const seq=()=>{ const s=new Set(nav().map(p=>p.c)); return navOrder.filter(c=>s.has(c)||c===curCode); };
+function openPost(code){ navCat=scopeOf(code); navOrder=[code,...shuffle(nav().map(p=>p.c).filter(c=>c!==code))]; cur=0; curCode=code; idx=0; renderLb(); if(!lb.open){ lb.showModal(); anim(lb,[{opacity:0,transform:'translateY(18px) scale(.97)'},{opacity:1,transform:'none'}],320); } $('.lbg').scrollTop=0; }
 function renderLb(){ const p=BY[curCode]; const f=p.f[idx];
   const th=f?(TH(f)||(p.pv&&!p.pv.startsWith('data:')?TH(p.pv):p.pv)||''):'';
   $('#media').innerHTML=!f?'<div class="missing" style="width:300px">Dosya yok</div>':isVid(f)?`<video controls autoplay playsinline ${th?`poster="${th}"`:''}></video>`:`<img src="${th||BLANK}" alt="">`;
@@ -1004,7 +1024,8 @@ function renderLb(){ const p=BY[curCode]; const f=p.f[idx];
     $('#media').style.position='relative';
     if(fb){ $('#media').insertAdjacentHTML('beforeend',ov); $('#media').querySelector('[data-embtry]').onclick=()=>{ $('#media').innerHTML=frame()+ov.replace(/<button[^>]*>.*?<\/button>/,''); }; }
     else $('#media').innerHTML=frame()+ov; }
-  const NL=nav(); cur=NL.findIndex(x=>x.c===curCode); $('#pPrev').disabled=cur<=0; $('#pNext').disabled=cur<0||cur>=NL.length-1; $('#pPos').textContent=cur>=0?`${cur+1} / ${NL.length}`+(navCat&&N(navCat)&&navCat!==ui.sel?` · ${N(navCat).name}`:''):''; $('#pPos').title=navCat&&N(navCat)?pathStr(navCat):''; }
+  { const f=isFav(curCode), b=$('#lbFav'); b.classList.toggle('on',f); b.setAttribute('aria-pressed',f); b.setAttribute('aria-label',f?'Favorilerden çıkar':'Favorilere ekle'); }
+  const NL=seq(); cur=NL.indexOf(curCode); $('#pPrev').disabled=cur<=0; $('#pNext').disabled=cur<0||cur>=NL.length-1; $('#pPos').textContent=cur>=0?`${cur+1} / ${NL.length}`+(navCat&&N(navCat)&&navCat!==ui.sel?` · ${N(navCat).name}`:''):''; $('#pPos').title=navCat&&N(navCat)?pathStr(navCat):''; }
 function renderLbMeta(){ const c=curCode, m=note(c);
   $('#lbCats').innerHTML=assigned(c).map(id=>`<span class="cchip"><i style="background:${color(id)}"></i>${esc(pathStr(id))}<button data-rm="${id}" title="Kaldır">✕</button></span>`).join('')+`<button class="btn sm" id="lbAdd">＋ Kategori</button>`;
   const sg=suggest(c); $('#lbSugWrap').hidden=!sg.length; $('#lbSug').innerHTML=sg.map(id=>`<button class="sugg" data-sg="${id}">＋ ${esc(pathStr(id))}</button>`).join('');
@@ -1018,7 +1039,7 @@ $('#tagIn').addEventListener('keydown',e=>{ if(e.key!=='Enter') return; const v=
 let noteT; $('#lbNote').addEventListener('input',e=>{ clearTimeout(noteT); const c=curCode, v=e.target.value; noteT=setTimeout(()=>{ snapshot(); const m=cat.meta[c]||(cat.meta[c]={}); m.note=v; cleanMeta(c); changed(); },500); });
 function cleanMeta(c){ const m=cat.meta[c]; if(!m) return; if(!m.note) delete m.note; if(m.tags&&!m.tags.length) delete m.tags; if(!Object.keys(m).length) delete cat.meta[c]; }
 const step=d=>{const n=BY[curCode].f.length; if(n>1){idx=(idx+d+n)%n; renderLb(); anim($('#media'),[{opacity:.2,transform:`translateX(${d*28}px)`},{opacity:1,transform:'none'}],240);}};
-const post=d=>{const NL=nav(); cur=NL.findIndex(x=>x.c===curCode); const n=cur+d; if(cur>=0&&n>=0&&n<NL.length){cur=n; curCode=NL[n].c; idx=0; renderLb(); $('.lbg').scrollTop=0; anim($('.lbg'),[{opacity:0,transform:`translateX(${d*46}px)`},{opacity:1,transform:'none'}],300);}};
+const post=d=>{const NL=seq(); cur=NL.indexOf(curCode); const n=cur+d; if(cur>=0&&n>=0&&n<NL.length){cur=n; curCode=NL[n]; idx=0; renderLb(); $('.lbg').scrollTop=0; anim($('.lbg'),[{opacity:0,transform:`translateX(${d*46}px)`},{opacity:1,transform:'none'}],300);}};
 $('#prev').onclick=()=>step(-1); $('#next').onclick=()=>step(1); $('#pPrev').onclick=()=>post(-1); $('#pNext').onclick=()=>post(1); $('#close').onclick=()=>lb.close();
 lb.addEventListener('click',e=>{ if(e.target===lb) lb.close(); });
 lb.addEventListener('close',()=>{$('#media').innerHTML=''; if(curCode) refreshCard(curCode);});
@@ -1105,14 +1126,15 @@ $('#addGo').onclick=async()=>{
 };
 function setDeleted(keys,on){ keys=expandG(keys); snapshot(); cat.deleted=cat.deleted||{}; const t=new Date().toISOString(); keys.forEach(k=>{ if(on) cat.deleted[k]=t; else delete cat.deleted[k]; }); changed(); }
 $('#lbUngroup').onclick=()=>{ const p=BY[curCode]; if(!p||!p.grp) return; const first=p.members[0]; snapshot(); const G={...groupsOf()}; delete G[p.grp]; cat.meta[GK]=G; changed();
-  cur=nav().findIndex(x=>x.c===first); curCode=first; idx=0; if(!BY[first]||!list.some(x=>x.c===first)){ lb.close(); } else renderLb(); toast('Grup çözüldü'); };
+  { const gi=navOrder.indexOf(p.c); const ms=p.members.filter(c=>BY[c]); if(gi>=0) navOrder.splice(gi,1,...ms); else navOrder.push(...ms); } cur=navOrder.indexOf(first); curCode=first; idx=0; if(!BY[first]||!list.some(x=>x.c===first)){ lb.close(); } else renderLb(); toast('Grup çözüldü'); };
 try{ $('#lbMore').open=localStorage.getItem('ub.lbMore')==='1'; }catch{}
 $('#lbMore').addEventListener('toggle',()=>{ try{ localStorage.setItem('ub.lbMore',$('#lbMore').open?'1':'0'); }catch{} });
+$('#lbFav').onclick=()=>{ if(curCode) toggleFav(curCode); };
 $('#capMore').onclick=()=>{ const open=$('#lbCap').classList.toggle('clamp'); $('#capMore').textContent=open?'Devamını oku ▾':'Daha az ▴'; };
-$('#lbDel').onclick=async()=>{ const p=BY[curCode]; if(!p) return; const NL0=nav(); const k0=NL0.findIndex(x=>x.c===p.c);
+$('#lbDel').onclick=async()=>{ const p=BY[curCode]; if(!p) return; const k0=seq().indexOf(p.c);
   if(isDel(p.c)){ setDeleted([p.c],false); toast('Geri yüklendi'); }
   else { const v=await ask({title:'Bu gönderi silinsin mi?',body:'Gönderi katalogdan kaldırılır ve <b>🗑 Silinenler</b> bölümüne gider; oradan geri yükleyebilirsin. Dosyaları diskte durur.',buttons:[{label:'Vazgeç',v:null},{label:'Sil',v:1,cls:'primary'}]}); if(!v) return; setDeleted([p.c],true); toast('Silindi — 🗑 Silinenler\'den geri alabilirsin'); }
-  const NL=nav(); if(!NL.length){ lb.close(); return; } if(NL.some(x=>x.c===p.c)) return renderLb(); cur=Math.max(0,Math.min(k0,NL.length-1)); curCode=NL[cur].c; idx=0; renderLb(); };
+  if(nav().some(x=>x.c===p.c)) return renderLb(); navOrder=navOrder.filter(c=>c!==p.c); const NL=seq().filter(c=>c!==p.c); if(!NL.length){ lb.close(); return; } cur=Math.max(0,Math.min(k0,NL.length-1)); curCode=NL[cur]; idx=0; renderLb(); };
 $('#bDel').onclick=async()=>{ const keys=[...picked]; if(!keys.length) return; const restore=ui.sel==='__trash';
   if(!restore){ const v=await ask({title:`${keys.length} gönderi silinsin mi?`,body:'Seçilen gönderiler <b>🗑 Silinenler</b> bölümüne gider; oradan geri yükleyebilirsin. Dosyaları diskte durur.',buttons:[{label:'Vazgeç',v:null},{label:'Sil',v:1,cls:'primary'}]}); if(!v) return; }
   setDeleted(keys,!restore); picked.clear(); updateBulk(); toast(restore?`${keys.length} gönderi geri yüklendi`:`${keys.length} gönderi silindi`); };
