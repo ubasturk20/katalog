@@ -267,6 +267,7 @@ body.filedrag::after{content:'Dosyaları buraya bırak → kataloğa ekle';posit
   <button class="btn" id="bMove">➜ Taşı</button>
   <button class="btn" id="bRemove">Bu kategoriden çıkar</button>
   <button class="btn" id="bTag"># Etiket</button>
+  <button class="btn" id="bGroup" title="Seçilenleri tek bir kaydırmalı gönderide topla">▦ Grupla</button>
   <button class="btn" id="bAll">Tümünü seç</button>
   <button class="btn" id="bDel">🗑 Sil</button>
   <button class="btn" id="bClear">✕</button>
@@ -328,7 +329,7 @@ body.filedrag::after{content:'Dosyaları buraya bırak → kataloğa ekle';posit
       <section><h3>Etiketler</h3><div class="chips" id="lbTags"></div>
         <input class="field" id="tagIn" placeholder="Etiket ekle, Enter'a bas (örn. ceviz, raf)" style="margin-top:8px"></section>
       <section><h3>Notum</h3><textarea class="note" id="lbNote" placeholder="Bu gönderiyle ilgili notun…"></textarea></section>
-      <div class="row"><a class="btn primary sm" id="lbLink" target="_blank" rel="noopener">Instagram'da aç ↗</a><a class="btn sm" id="lbFile" target="_blank">Dosyayı aç</a><button class="btn sm" id="lbDel">🗑 Sil</button></div>
+      <div class="row"><a class="btn primary sm" id="lbLink" target="_blank" rel="noopener">Instagram'da aç ↗</a><a class="btn sm" id="lbFile" target="_blank">Dosyayı aç</a><button class="btn sm" id="lbDel">🗑 Sil</button><button class="btn sm" id="lbUngroup" hidden title="Grubu çözüp gönderileri yeniden ayrı göster">▦ Grubu çöz</button></div>
       <div class="fname" id="lbName"></div>
       <section><h3>Açıklama</h3><div class="full" id="lbCap"></div></section>
       <div class="sub" id="lbIg"></div>
@@ -550,7 +551,18 @@ function mergeSeeds(c){ // adds collections/assignments of accounts not yet in t
     c.migr.kategorisiz=new Date().toISOString(); if(n) added.push('Kategorisiz ('+n+' gönderi)'); }
   const g=normGenel(c); if(g) added.push('Genel alt kategorileri ('+g+' gönderi)');
   return added; }
-const isDel = k => !!(cat.deleted&&cat.deleted[k]);
+const isDel = k => { const p=BY[k]; if(p&&p.members) return p.members.every(m=>!!(cat.deleted&&cat.deleted[m])); return !!(cat.deleted&&cat.deleted[k]); };
+const GK='__groups'; const groupsOf=()=>cat.meta[GK]||{};
+const expandG = cs => [...new Set(cs.flatMap(c=>BY[c]?.members||[c]))];
+function syncGroups(){ // user-made groups: shown as one carousel card; members stay in the data
+  for(let i=DATA.length-1;i>=0;i--) if(DATA[i].grp){ delete BY[DATA[i].c]; DATA.splice(i,1); }
+  DATA.forEach(p=>{ delete p.inGrp; });
+  for(const [g,o] of Object.entries(groupsOf())){ const ms=(o.m||[]).map(c=>BY[c]).filter(p=>p&&!p.grp); if(ms.length<2) continue;
+    const live=ms.filter(p=>!(cat.deleted&&cat.deleted[p.c])); const use=live.length?live:ms; const f0=use[0];
+    const vp={c:'grp:'+g,grp:g,members:ms.map(p=>p.c),parts:use.map(p=>({c:p.c,n:p.f.length})),sc:f0.sc,a:f0.a,u:f0.u,src:f0.src,url:f0.url,embed:f0.embed,t:f0.t,y:f0.y,m:'carousel',
+      cap:o.name||f0.cap,ig:[...new Set(ms.flatMap(p=>p.ig||[]))],f:use.flatMap(p=>p.f),pv:f0.pv,i:Math.min(...ms.map(p=>p.i))};
+    ms.forEach(p=>p.inGrp=g); DATA.push(vp); BY[vp.c]=vp; } }
+const memberAt=(p,i)=>{ if(!p.parts) return p; for(const x of p.parts){ if(i<x.n) return BY[x.c]||p; i-=x.n; } return p; };
 function normGenel(c){ // posts directly on a category that has sub-categories go into its "Genel" sub-category
   const par=new Set(); for(const id in c.nodes){ const pa=c.nodes[id].parent; if(pa&&c.nodes[pa]) par.add(pa); }
   let moved=0;
@@ -587,7 +599,7 @@ function pathOf(id){const p=[];let n=N(id);while(n){p.unshift(n);n=N(n.parent);}
 const pathStr = id => pathOf(id).map(n=>n.name).join(' › ');
 const color = id => { let n=N(id); while(n&&!n.color) n=N(n.parent); return n?.color||'#9b8b7c'; };
 const newId = () => 'n'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-const assigned = c => (cat.assign[c]||[]).filter(id=>N(id));
+const assigned = c => { const p=BY[c]; return (p&&p.members ? [...new Set(p.members.flatMap(m=>cat.assign[m]||[]))] : (cat.assign[c]||[])).filter(id=>N(id)); };
 const note = c => cat.meta[c]||{};
 
 // derived index: node -> set of posts (direct), counts incl. descendants
@@ -597,14 +609,14 @@ function syncCustom(){ // posts added from this computer live in cat.custom (sav
   for(const k in (cat.custom||{})){ const e=cat.custom[k]; const p={...e,custom:true,ig:e.ig||[],i:DATA.length,y:(e.t||'').slice(0,4)}; DATA.push(p); BY[p.c]=p; }
   const accs=[...new Set(DATA.map(p=>p.a))]; if(accs.join()!==ACCS.join()){ ACCS=accs; fillAcc(); } fillYear(); }
 function fillAcc(){ $('#acc').innerHTML='<option value="">Tüm hesaplar</option>'+ACCS.map(a=>`<option value="${a}">${esc(ACC_LABEL[a]||a)} (${DATA.filter(p=>p.a===a).length})</option>`).join(''); if(ui.acc&&!ACCS.includes(ui.acc)) ui.acc=''; $('#acc').value=ui.acc; $('#acc').hidden=true; ui.acc=''; }
-function fillYear(){ const yc={}; DATA.forEach(p=>{ if(p.y) yc[p.y]=(yc[p.y]||0)+1; }); const ys=Object.keys(yc).sort().reverse();
+function fillYear(){ const yc={}; DATA.forEach(p=>{ if(p.y&&!p.grp) yc[p.y]=(yc[p.y]||0)+1; }); const ys=Object.keys(yc).sort().reverse();
   const h='<option value="">Tüm yıllar</option>'+ys.map(y=>`<option value="${y}">${y} (${yc[y]})</option>`).join(''); if($('#year').innerHTML!==h) $('#year').innerHTML=h;
   if(ui.year&&!yc[ui.year]) ui.year=''; $('#year').value=ui.year; $('#year').title='Gönderinin paylaşıldığı (eklenenlerde dosyanın) yılı'; }
 function index(){
-  syncCustom();
+  syncCustom(); syncGroups();
   direct={}; for(const id in cat.nodes) direct[id]=new Set();
   uncategorized=0; tagCount={};
-  for(const p of DATA){ const a=assigned(p.c); if(isDel(p.c)){ p.s=low([p.u,p.cap].join(' ')); continue; } if(!a.length) uncategorized++; a.forEach(id=>direct[id].add(p.c));
+  for(const p of DATA){ if(p.inGrp){ p.s=''; continue; } const a=assigned(p.c); if(isDel(p.c)){ p.s=low([p.u,p.cap].join(' ')); continue; } if(!a.length) uncategorized++; a.forEach(id=>direct[id].add(p.c));
     (note(p.c).tags||[]).forEach(t=>tagCount[t]=(tagCount[t]||0)+1);
     p.s = low([p.u,p.cap,(note(p.c).note||''),(note(p.c).tags||[]).join(' '),a.map(pathStr).join(' '),p.ig.join(' ')].join(' ')); }
   total={}; for(const id in cat.nodes){const s=new Set(); desc(id).forEach(d=>direct[d].forEach(c=>s.add(c))); total[id]=s.size;}
@@ -707,12 +719,12 @@ document.addEventListener('drop',e=>{ if(!drag) return; const t=overTarget(e); i
 /* ---------- assignments ---------- */
 const curNode = () => (ui.sel&&N(ui.sel))?ui.sel:null;
 function assignTo(codes,id,move){
-  snapshot(); const from=curNode();
+  codes=expandG(codes); snapshot(); const from=curNode();
   codes.forEach(c=>{ let a=assigned(c); if(move&&from) a=a.filter(x=>!desc(from).includes(x)); if(!a.includes(id)) a.push(id); cat.assign[c]=a; });
   changed(); toast(`${codes.length} gönderi → ${pathStr(id)}${move&&from?' (taşındı)':''}`);
 }
 function removeFrom(codes,id){ // id null = remove all categories
-  snapshot(); const rm = id? desc(id) : null;
+  codes=expandG(codes); snapshot(); const rm = id? desc(id) : null;
   codes.forEach(c=>{ const a=assigned(c).filter(x=>rm?!rm.includes(x):false); if(a.length) cat.assign[c]=a; else delete cat.assign[c]; });
   changed(); toast(id?`${codes.length} gönderi “${N(id).name}” dışına çıkarıldı`:`${codes.length} gönderi kategorisiz yapıldı`);
 }
@@ -742,8 +754,8 @@ function renderView(opt={}){
   const keepN=opt.keep?shown:0, keepY=opt.keep?$('#main').scrollTop:0;
   const sel=ui.sel; const q=low(ui.q.trim()).split(/\s+/).filter(Boolean);
   let base;
-  const LIVE=DATA.filter(p=>!isDel(p.c));
-  if(sel==='__trash') base=DATA.filter(p=>isDel(p.c));
+  const LIVE=DATA.filter(p=>!p.inGrp&&!isDel(p.c));
+  if(sel==='__trash') base=DATA.filter(p=>isDel(p.c)&&!(p.inGrp&&isDel('grp:'+p.inGrp)));
   else if(sel==='__none') base=LIVE.filter(p=>!assigned(p.c).length);
   else if(sel==='__noted') base=LIVE.filter(p=>{const m=note(p.c);return m.note||(m.tags&&m.tags.length)});
   else if(sel&&N(sel)){ const s=new Set(); desc(sel).forEach(d=>direct[d].forEach(c=>s.add(c))); base=LIVE.filter(p=>s.has(p.c)); }
@@ -764,7 +776,7 @@ $('#crumbs').addEventListener('click',e=>{const g=e.target.closest('[data-go]');
 let subsOpen=false;
 $('#subcats').addEventListener('click',e=>{ if(e.target.closest('[data-more]')){ subsOpen=!subsOpen; renderView(); return; } const g=e.target.closest('[data-go]'); if(g) select(g.dataset.go)});
 function cardHTML(p){
-  const f=p.f[0]; const badge=p.f.length>1?`<span class="badge">▦ ${p.f.length}</span>`:(f&&isVid(f)?'<span class="badge">▶ Video</span>':'');
+  const f=p.f[0]; const badge=p.f.length>1?`<span class="badge">▦ ${p.f.length}</span>`:((f&&isVid(f))||p.embed?'<span class="badge">▶ Video</span>':'');
   const th=f?(TH(f)||(p.pv?(p.pv.startsWith('data:')?p.pv:TH(p.pv)):'')):'';
   const tr=(f&&isVid(f)&&p.pv&&!p.pv.startsWith('data:'))?p.pv:f;
   const m=!f?'<div class="missing">Dosya yok</div>':th?`<img src="${th}" data-r="${String(tr).replace(/"/g,'&quot;')}" loading="lazy" alt="">`:`<div class="missing">${isVid(f)?'▶ Video':'Önizleme yok'}</div>`;
@@ -806,8 +818,12 @@ $('#grid').addEventListener('keydown',e=>{if(e.key==='Enter'){const c=e.target.c
 function toggleSel(on){ selMode=on??!selMode; $('#selBtn').classList.toggle('on',selMode); $('#grid').classList.toggle('selmode',selMode); if(!selMode){picked.clear(); document.querySelectorAll('.card.picked').forEach(x=>x.classList.remove('picked'));} updateBulk(); }
 $('#selBtn').onclick=()=>toggleSel();
 function updateBulk(){ const n=picked.size; $('#bulk').hidden=!selMode; $('#bulkN').textContent=n?`${n} seçili`:'Gönderilere tıklayarak seç (Shift ile aralık)';
-  ['#bAdd','#bMove','#bTag','#bDel'].forEach(s=>$(s).disabled=!n); $('#bDel').textContent=ui.sel==='__trash'?'↺ Geri yükle':'🗑 Sil'; $('#bRemove').disabled=!n||!curNode(); $('#bMove').disabled=!n||!curNode(); }
+  ['#bAdd','#bMove','#bTag','#bDel'].forEach(s=>$(s).disabled=!n); $('#bGroup').disabled=n<2||ui.sel==='__trash'; $('#bDel').textContent=ui.sel==='__trash'?'↺ Geri yükle':'🗑 Sil'; $('#bRemove').disabled=!n||!curNode(); $('#bMove').disabled=!n||!curNode(); }
 $('#bClear').onclick=()=>toggleSel(false);
+$('#bGroup').onclick=()=>{ const order=new Map(list.map((p,i)=>[p.c,i])); const sel=[...picked].sort((a,b)=>(order.get(a)??1e9)-(order.get(b)??1e9));
+  const ms=expandG(sel); if(ms.length<2) return; snapshot(); const G={...groupsOf()};
+  for(const g in G){ G[g]={...G[g],m:G[g].m.filter(c=>!ms.includes(c))}; if(G[g].m.length<2) delete G[g]; }
+  G[newId()]={m:ms,at:new Date().toISOString()}; cat.meta[GK]=G; toggleSel(false); changed(); toast(ms.length+' gönderi tek kaydırmalı gönderide toplandı'); };
 $('#bAll').onclick=()=>{ list.forEach(p=>picked.add(p.c)); document.querySelectorAll('.card').forEach(x=>x.classList.add('picked')); updateBulk(); };
 $('#bAdd').onclick=async()=>{ const id=await pickNode({title:`${picked.size} gönderiyi kategoriye ekle`}); if(id) assignTo([...picked],id,false); };
 $('#bMove').onclick=async()=>{ const id=await pickNode({title:`${picked.size} gönderiyi “${N(curNode()).name}” içinden taşı`}); if(id) { assignTo([...picked],id,true); picked.clear(); updateBulk(); } };
@@ -841,11 +857,12 @@ function renderLb(){ const p=BY[curCode]; const f=p.f[idx];
   if(f) window.__G.full(f).then(u=>{ if(curCode+'|'+idx!==want||!el.isConnected) return; if(!u){ if(!th) $('#media').innerHTML='<div class="missing" style="width:320px;color:#ddd;text-align:center">Dosya OneDrive\'da bulunamadı</div>'; return; } el.src=u; $('#lbFile').href=u; });
   el?.addEventListener?.('error',()=>{$('#media').innerHTML=`<div class="missing" style="width:320px;color:#ddd;text-align:center">${f&&isVid(f)?'Video bu tarayıcıda oynatılamadı.<br>“Dosyayı aç” ile varsayılan oynatıcıda açabilirsin.':'Dosya bulunamadı'}</div>`});
   $('#prev').hidden=$('#next').hidden=p.f.length<2; $('#dots').innerHTML=p.f.length>1?p.f.map((_,j)=>`<i class="${j===idx?'on':''}"></i>`).join(''):'';
-  $('#lbUser').textContent=uname(p); $('#lbDate').textContent=[fmtDate(p.t),typeLabel[p.m],p.f.length>1?`${idx+1}/${p.f.length}`:''].filter(Boolean).join(' · ');
+  const mp=memberAt(p,idx); $('#lbUser').textContent=uname(mp); $('#lbDate').textContent=[fmtDate(p.t),typeLabel[p.m],p.f.length>1?`${idx+1}/${p.f.length}`:''].filter(Boolean).join(' · ');
   renderLbMeta();
-  $('#lbLink').href=p.url||('https://www.instagram.com/p/'+(p.sc||p.c)+'/'); $('#lbLink').textContent=p.url?'Kaynağı aç ↗':(p.src?'':'Instagram\'da aç ↗'); $('#lbFile').href='#'; $('#lbName').textContent=f?f.split('/').pop():'';
-  $('#lbCap').textContent=p.cap||'(Açıklama yok)'; $('#lbIg').textContent=p.custom?('Bilgisayardan eklendi · '+new Date(p.added).toLocaleString('tr-TR')):('Kaydeden hesap: '+p.a+' · '+(p.ig.length?'Instagram koleksiyonu: '+p.ig.join(', '):'Instagram\'da koleksiyonsuz'));
-  $('#lbLink').hidden=!!p.custom||(!!p.src&&!p.url); $('#lbDel').textContent=isDel(p.c)?'↺ Geri yükle':'🗑 Sil';
+  $('#lbLink').href=mp.url||('https://www.instagram.com/p/'+(mp.sc||mp.c)+'/'); $('#lbLink').textContent=mp.url?'Kaynağı aç ↗':(mp.src?'':'Instagram\'da aç ↗'); $('#lbFile').href='#'; $('#lbName').textContent=f?f.split('/').pop():'';
+  $('#lbCap').textContent=mp.cap||p.cap||'(Açıklama yok)'; $('#lbIg').textContent=p.custom?('Bilgisayardan eklendi · '+new Date(p.added).toLocaleString('tr-TR')):('Kaydeden hesap: '+p.a+' · '+(p.ig.length?'Instagram koleksiyonu: '+p.ig.join(', '):'Instagram\'da koleksiyonsuz'));
+  $('#lbLink').hidden=!!mp.custom||(!!mp.src&&!mp.url); $('#lbUngroup').hidden=!p.grp; $('#lbDel').textContent=isDel(p.c)?'↺ Geri yükle':'🗑 Sil';
+  if(mp.embed&&(!p.parts||mp.f.includes(f))){ $('#media').innerHTML=`<iframe src="${esc(mp.embed)}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen style="display:block;border:0;background:#000;${mp.ev?'height:min(80vh,760px);aspect-ratio:9/16;max-width:92vw':'width:min(92vw,960px);aspect-ratio:16/9;max-height:80vh'}"></iframe>`; }
   $('#pPrev').disabled=cur<=0; $('#pNext').disabled=cur<0||cur>=list.length-1; }
 function renderLbMeta(){ const c=curCode, m=note(c);
   $('#lbCats').innerHTML=assigned(c).map(id=>`<span class="cchip"><i style="background:${color(id)}"></i>${esc(pathStr(id))}<button data-rm="${id}" title="Kaldır">✕</button></span>`).join('')+`<button class="btn sm" id="lbAdd">＋ Kategori</button>`;
@@ -944,7 +961,9 @@ $('#addGo').onclick=async()=>{
   }catch(err){ console.warn(err); if(err.name!=='AbortError') toast('Eklenemedi: '+(err.message||err)); }
   finally{ btn.disabled=false; btn.textContent='Ekle'; snapshot.done=false; }
 };
-function setDeleted(keys,on){ snapshot(); cat.deleted=cat.deleted||{}; const t=new Date().toISOString(); keys.forEach(k=>{ if(on) cat.deleted[k]=t; else delete cat.deleted[k]; }); changed(); }
+function setDeleted(keys,on){ keys=expandG(keys); snapshot(); cat.deleted=cat.deleted||{}; const t=new Date().toISOString(); keys.forEach(k=>{ if(on) cat.deleted[k]=t; else delete cat.deleted[k]; }); changed(); }
+$('#lbUngroup').onclick=()=>{ const p=BY[curCode]; if(!p||!p.grp) return; const first=p.members[0]; snapshot(); const G={...groupsOf()}; delete G[p.grp]; cat.meta[GK]=G; changed();
+  cur=list.findIndex(x=>x.c===first); curCode=first; idx=0; if(cur<0){ lb.close(); } else renderLb(); toast('Grup çözüldü'); };
 $('#lbDel').onclick=async()=>{ const p=BY[curCode]; if(!p) return; const k0=list.findIndex(x=>x.c===p.c);
   if(isDel(p.c)){ setDeleted([p.c],false); toast('Geri yüklendi'); }
   else { const v=await ask({title:'Bu gönderi silinsin mi?',body:'Gönderi katalogdan kaldırılır ve <b>🗑 Silinenler</b> bölümüne gider; oradan geri yükleyebilirsin. Dosyaları diskte durur.',buttons:[{label:'Vazgeç',v:null},{label:'Sil',v:1,cls:'primary'}]}); if(!v) return; setDeleted([p.c],true); toast('Silindi — 🗑 Silinenler\'den geri alabilirsin'); }
