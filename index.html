@@ -1025,7 +1025,7 @@ function renderLb(){ const p=BY[curCode]; const f=p.f[idx];
     if(fb){ $('#media').insertAdjacentHTML('beforeend',ov); $('#media').querySelector('[data-embtry]').onclick=()=>{ $('#media').innerHTML=frame()+ov.replace(/<button[^>]*>.*?<\/button>/,''); }; }
     else $('#media').innerHTML=frame()+ov; }
   { const f=isFav(curCode), b=$('#lbFav'); b.classList.toggle('on',f); b.setAttribute('aria-pressed',f); b.setAttribute('aria-label',f?'Favorilerden çıkar':'Favorilere ekle'); }
-  const NL=seq(); cur=NL.indexOf(curCode); $('#pPrev').disabled=cur<=0; $('#pNext').disabled=cur<0||cur>=NL.length-1; $('#pPos').textContent=cur>=0?`${cur+1} / ${NL.length}`+(navCat&&N(navCat)&&navCat!==ui.sel?` · ${N(navCat).name}`:''):''; $('#pPos').title=navCat&&N(navCat)?pathStr(navCat):''; }
+  const NL=seq(); cur=NL.indexOf(curCode); $('#pPrev').disabled=cur<=0; $('#pNext').disabled=cur<0||cur>=NL.length-1; const PL=nav(), pi=PL.findIndex(x=>x.c===curCode); $('#pPos').textContent=cur>=0?`🔀 ${pi>=0?pi+1:cur+1} / ${PL.length}`+(navCat&&N(navCat)&&navCat!==ui.sel?` · ${N(navCat).name}`:''):''; $('#pPos').title=navCat&&N(navCat)?pathStr(navCat):''; }
 function renderLbMeta(){ const c=curCode, m=note(c);
   $('#lbCats').innerHTML=assigned(c).map(id=>`<span class="cchip"><i style="background:${color(id)}"></i>${esc(pathStr(id))}<button data-rm="${id}" title="Kaldır">✕</button></span>`).join('')+`<button class="btn sm" id="lbAdd">＋ Kategori</button>`;
   const sg=suggest(c); $('#lbSugWrap').hidden=!sg.length; $('#lbSug').innerHTML=sg.map(id=>`<button class="sugg" data-sg="${id}">＋ ${esc(pathStr(id))}</button>`).join('');
