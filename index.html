@@ -66,7 +66,7 @@ aside.side{border-right:1px solid var(--line);background:var(--side);overflow:au
 .ncount{font-size:12px;color:var(--muted);flex:none}
 .nact{display:none;gap:2px;flex:none}
 .node:hover .nact,.node.sel .nact{display:flex}
-.node:hover .ncount,.node.sel .ncount{display:none}
+.node:hover .ncount,.node.sel .ncount{color:var(--ink);background:var(--chip);border-radius:999px;padding:1px 7px}
 .nact button{width:24px;height:24px;border:0;border-radius:6px;background:transparent;color:var(--muted);font-size:13px;padding:0}
 .nact button:hover{background:var(--panel);color:var(--ink)}
 .node input{flex:1;min-width:0;height:26px;border:1px solid var(--accent);border-radius:6px;padding:0 6px;background:var(--panel)}
@@ -360,6 +360,20 @@ body.filedrag::after{content:'Dosyaları buraya bırak → kataloğa ekle';posit
 #boot input{width:100%;margin-top:6px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
 #boot .err{color:var(--danger);white-space:pre-wrap;text-align:left;font-size:13px}
 .cloudnote{font-size:12px;color:var(--muted)}
+#gate{position:fixed;inset:0;z-index:70;display:grid;place-items:center;padding:20px;background:radial-gradient(120% 80% at 50% 25%,#2a221a 0%,#15120e 65%);color:#ece3d4;font-family:Inter,system-ui,sans-serif;cursor:pointer;animation:gateIn .5s ease both}
+#gate.out{animation:gateOut .45s ease forwards}
+#gate:focus{outline:none}
+@keyframes gateIn{from{opacity:0}to{opacity:1}}
+@keyframes gateOut{to{opacity:0;transform:scale(1.03);visibility:hidden}}
+#gate .gcard{width:min(360px,100%);box-sizing:border-box;padding:34px 26px 26px;border-radius:26px;background:rgba(255,248,238,.06);border:1px solid rgba(255,248,238,.13);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);box-shadow:0 30px 80px rgba(0,0,0,.45);display:flex;flex-direction:column;gap:16px}
+#gate .gmark{display:flex;flex-direction:column;align-items:center;gap:10px;margin-bottom:6px}
+#gate h2{margin:0;font:600 28px/1.1 "Cormorant Garamond",Georgia,serif;letter-spacing:.05em}
+#gate .gsub{margin:0;font-size:13px;color:#a4977f;text-align:center}
+#gate label{display:flex;flex-direction:column;gap:6px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#a4977f}
+#gate input{height:46px;border-radius:12px;border:1px solid rgba(255,248,238,.16);background:rgba(255,248,238,.05);color:#ece3d4;padding:0 14px;font-size:15px;pointer-events:none}
+#gate .gbtn{height:48px;border:0;border-radius:12px;background:#e08a3c;color:#1a120a;font-weight:600;font-size:15px;margin-top:6px}
+#gate .gfoot{display:flex;justify-content:space-between;font-size:12px;color:#8c7f6c}
+#gate .ghint{margin:4px 0 0;font-size:11.5px;color:#8c7f6c;text-align:center}
 </style>
 <div id="boot"><div class="box">
   <h2>UB Medya Arsiv</h2>
@@ -478,6 +492,19 @@ window.__G={full,putCatalog,fetchCatalog,MAP,folder:FOLDER,
   th:rel=>{ const e=MAP[rel]; return e?(e.th||(isImgF(rel)?e.dl:'')):''; },
   alt:rel=>{ const e=MAP[rel]; return e&&isImgF(rel)?e.dl:''; } };
 
+/* --- giriş ekranı (şimdilik yalnızca görsel; bir yere dokununca kapanır, oturum boyunca bir kez) --- */
+function showGate(){ try{ if(sessionStorage.getItem('ub.gate')) return; }catch{}
+  const g=document.createElement('div'); g.id='gate'; g.setAttribute('role','dialog'); g.setAttribute('aria-label','Giriş');
+  g.innerHTML=`<form class="gcard" onsubmit="return false">
+    <div class="gmark"><svg width="64" height="64" viewBox="0 0 200 200" aria-hidden="true"><path d="M139,32.4 A78,78 0 1,1 113.5,23.2" fill="none" stroke="#ece3d4" stroke-width="12" stroke-linecap="round"/></svg>
+      <h2>UB Medya Arşiv</h2><p class="gsub">Arşivine hoş geldin</p></div>
+    <label>Kullanıcı adı<input type="text" placeholder="kullanici@ornek.com" autocomplete="off" readonly tabindex="-1"></label>
+    <label>Şifre<input type="password" placeholder="••••••••" autocomplete="off" readonly tabindex="-1"></label>
+    <div class="gfoot"><span>☐ Beni hatırla</span><span>Şifremi unuttum</span></div>
+    <button type="button" class="gbtn">Giriş yap</button>
+    <p class="ghint">Önizleme · devam etmek için herhangi bir yere dokun</p></form>`;
+  const close=()=>{ if(g.classList.contains('out')) return; g.classList.add('out'); try{ sessionStorage.setItem('ub.gate','1'); }catch{} setTimeout(()=>g.remove(),500); };
+  g.addEventListener('click',close); g.addEventListener('keydown',close); document.body.appendChild(g); g.tabIndex=-1; g.focus(); }
 /* --- açılış --- */
 (async()=>{
   try{
@@ -516,7 +543,7 @@ window.__G={full,putCatalog,fetchCatalog,MAP,folder:FOLDER,
       else if((remote.savedAt||'')>(local.savedAt||'')){ ETAG='"eski"'; note='Bu cihazda kaydedilmemiş değişiklikler var, OneDrive\'da da daha yeni bir sürüm var. 💾 Kaydet\'e basınca hangisinin kalacağını soracağım.'; } }
     window.__D={data:veri.d.data,seeds:veri.d.seeds,note};
     const thN=Object.values(MAP).filter(e=>e.th).length; mark('Küçük resim önbellekten',thN?'var, '+Math.round(thAge/36e5)+' saat önce':'yok — fotoğrafın kendisi gösterilecek');
-    $b('boot').remove(); window.__start(); mark('Katalog ekranda'); showTiming();
+    $b('boot').remove(); window.__start(); mark('Katalog ekranda'); showTiming(); showGate();
     // küçük resim bağlantılarını arka planda, tek tek klasör tazele (12 saatte bir)
     if(thAge>12*36e5){ setTimeout(async()=>{ const N={}; const old=THC; THC=N;
       try{ for(const f of [...BK,'media','media/_kapak','media/eklenen']) await list(f,null,true);
