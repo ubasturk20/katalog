@@ -252,7 +252,7 @@ dialog.lb::backdrop{background:rgba(12,10,8,.62);backdrop-filter:blur(10px);-web
 .postnav{margin:0;padding:0 0 12px;border-top:0;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:8px}
 .postnav .pn{border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:999px;height:34px;padding:0 14px;font-size:13px}
 .postnav .pn:disabled{opacity:.35}
-.postnav .ppos{font-size:12px;letter-spacing:.12em;color:var(--muted)}
+.postnav .ppos{font-size:12px;letter-spacing:.1em;color:var(--muted);flex:1;min-width:0;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lacts .btn{height:32px}
 .lmore{border-top:1px solid var(--line);padding-top:10px}
 .lmore summary{cursor:pointer;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);list-style:none}
@@ -981,7 +981,13 @@ function suggest(code){ if(!TOK) buildTok(); const mine=TOK[code], have=new Set(
 /* ---------- lightbox ---------- */
 const lb=$('#lb'); let cur=-1, idx=0, curCode=null;
 const anim=(el,kf,ms)=>{ try{ if(!matchMedia('(prefers-reduced-motion: reduce)').matches) el.animate(kf,{duration:ms,easing:'cubic-bezier(.2,.7,.2,1)'}); }catch{} };
-function openPost(code){ cur=list.findIndex(p=>p.c===code); curCode=code; idx=0; renderLb(); if(!lb.open){ lb.showModal(); anim(lb,[{opacity:0,transform:'translateY(18px) scale(.97)'},{opacity:1,transform:'none'}],320); } $('.lbg').scrollTop=0; }
+// gezinme kapsamı: kartın açıldığı kategori/alt koleksiyon (o görünüm içindeki en alt kategorisi)
+let navCat=null;
+function scopeOf(code){ if(ui.sel&&!N(ui.sel)) return null; const a=assigned(code); if(!a.length) return null;
+  const inView=ui.sel?a.filter(id=>desc(ui.sel).includes(id)):a; const c=(inView.length?inView:a).slice();
+  return c.sort((x,y)=>pathOf(y).length-pathOf(x).length)[0]; }
+const nav=()=>navCat&&N(navCat)?list.filter(p=>assigned(p.c).includes(navCat)):list;
+function openPost(code){ navCat=scopeOf(code); cur=nav().findIndex(p=>p.c===code); curCode=code; idx=0; renderLb(); if(!lb.open){ lb.showModal(); anim(lb,[{opacity:0,transform:'translateY(18px) scale(.97)'},{opacity:1,transform:'none'}],320); } $('.lbg').scrollTop=0; }
 function renderLb(){ const p=BY[curCode]; const f=p.f[idx];
   const th=f?(TH(f)||(p.pv&&!p.pv.startsWith('data:')?TH(p.pv):p.pv)||''):'';
   $('#media').innerHTML=!f?'<div class="missing" style="width:300px">Dosya yok</div>':isVid(f)?`<video controls autoplay playsinline ${th?`poster="${th}"`:''}></video>`:`<img src="${th||BLANK}" alt="">`;
@@ -1000,7 +1006,7 @@ function renderLb(){ const p=BY[curCode]; const f=p.f[idx];
     $('#media').style.position='relative';
     if(fb){ $('#media').insertAdjacentHTML('beforeend',ov); $('#media').querySelector('[data-embtry]').onclick=()=>{ $('#media').innerHTML=frame()+ov.replace(/<button[^>]*>.*?<\/button>/,''); }; }
     else $('#media').innerHTML=frame()+ov; }
-  $('#pPrev').disabled=cur<=0; $('#pNext').disabled=cur<0||cur>=list.length-1; $('#pPos').textContent=cur>=0?`${cur+1} / ${list.length}`:''; }
+  const NL=nav(); cur=NL.findIndex(x=>x.c===curCode); $('#pPrev').disabled=cur<=0; $('#pNext').disabled=cur<0||cur>=NL.length-1; $('#pPos').textContent=cur>=0?`${cur+1} / ${NL.length}`+(navCat&&N(navCat)&&navCat!==ui.sel?` · ${N(navCat).name}`:''):''; $('#pPos').title=navCat&&N(navCat)?pathStr(navCat):''; }
 function renderLbMeta(){ const c=curCode, m=note(c);
   $('#lbCats').innerHTML=assigned(c).map(id=>`<span class="cchip"><i style="background:${color(id)}"></i>${esc(pathStr(id))}<button data-rm="${id}" title="Kaldır">✕</button></span>`).join('')+`<button class="btn sm" id="lbAdd">＋ Kategori</button>`;
   const sg=suggest(c); $('#lbSugWrap').hidden=!sg.length; $('#lbSug').innerHTML=sg.map(id=>`<button class="sugg" data-sg="${id}">＋ ${esc(pathStr(id))}</button>`).join('');
@@ -1014,7 +1020,7 @@ $('#tagIn').addEventListener('keydown',e=>{ if(e.key!=='Enter') return; const v=
 let noteT; $('#lbNote').addEventListener('input',e=>{ clearTimeout(noteT); const c=curCode, v=e.target.value; noteT=setTimeout(()=>{ snapshot(); const m=cat.meta[c]||(cat.meta[c]={}); m.note=v; cleanMeta(c); changed(); },500); });
 function cleanMeta(c){ const m=cat.meta[c]; if(!m) return; if(!m.note) delete m.note; if(m.tags&&!m.tags.length) delete m.tags; if(!Object.keys(m).length) delete cat.meta[c]; }
 const step=d=>{const n=BY[curCode].f.length; if(n>1){idx=(idx+d+n)%n; renderLb(); anim($('#media'),[{opacity:.2,transform:`translateX(${d*28}px)`},{opacity:1,transform:'none'}],240);}};
-const post=d=>{const n=cur+d; if(cur>=0&&n>=0&&n<list.length){cur=n; curCode=list[n].c; idx=0; renderLb(); $('.lbg').scrollTop=0; anim($('.lbg'),[{opacity:0,transform:`translateX(${d*46}px)`},{opacity:1,transform:'none'}],300);}};
+const post=d=>{const NL=nav(); cur=NL.findIndex(x=>x.c===curCode); const n=cur+d; if(cur>=0&&n>=0&&n<NL.length){cur=n; curCode=NL[n].c; idx=0; renderLb(); $('.lbg').scrollTop=0; anim($('.lbg'),[{opacity:0,transform:`translateX(${d*46}px)`},{opacity:1,transform:'none'}],300);}};
 $('#prev').onclick=()=>step(-1); $('#next').onclick=()=>step(1); $('#pPrev').onclick=()=>post(-1); $('#pNext').onclick=()=>post(1); $('#close').onclick=()=>lb.close();
 lb.addEventListener('click',e=>{ if(e.target===lb) lb.close(); });
 lb.addEventListener('close',()=>{$('#media').innerHTML=''; if(curCode) refreshCard(curCode);});
@@ -1101,14 +1107,14 @@ $('#addGo').onclick=async()=>{
 };
 function setDeleted(keys,on){ keys=expandG(keys); snapshot(); cat.deleted=cat.deleted||{}; const t=new Date().toISOString(); keys.forEach(k=>{ if(on) cat.deleted[k]=t; else delete cat.deleted[k]; }); changed(); }
 $('#lbUngroup').onclick=()=>{ const p=BY[curCode]; if(!p||!p.grp) return; const first=p.members[0]; snapshot(); const G={...groupsOf()}; delete G[p.grp]; cat.meta[GK]=G; changed();
-  cur=list.findIndex(x=>x.c===first); curCode=first; idx=0; if(cur<0){ lb.close(); } else renderLb(); toast('Grup çözüldü'); };
+  cur=nav().findIndex(x=>x.c===first); curCode=first; idx=0; if(!BY[first]||!list.some(x=>x.c===first)){ lb.close(); } else renderLb(); toast('Grup çözüldü'); };
 try{ $('#lbMore').open=localStorage.getItem('ub.lbMore')==='1'; }catch{}
 $('#lbMore').addEventListener('toggle',()=>{ try{ localStorage.setItem('ub.lbMore',$('#lbMore').open?'1':'0'); }catch{} });
 $('#capMore').onclick=()=>{ const open=$('#lbCap').classList.toggle('clamp'); $('#capMore').textContent=open?'Devamını oku ▾':'Daha az ▴'; };
-$('#lbDel').onclick=async()=>{ const p=BY[curCode]; if(!p) return; const k0=list.findIndex(x=>x.c===p.c);
+$('#lbDel').onclick=async()=>{ const p=BY[curCode]; if(!p) return; const NL0=nav(); const k0=NL0.findIndex(x=>x.c===p.c);
   if(isDel(p.c)){ setDeleted([p.c],false); toast('Geri yüklendi'); }
   else { const v=await ask({title:'Bu gönderi silinsin mi?',body:'Gönderi katalogdan kaldırılır ve <b>🗑 Silinenler</b> bölümüne gider; oradan geri yükleyebilirsin. Dosyaları diskte durur.',buttons:[{label:'Vazgeç',v:null},{label:'Sil',v:1,cls:'primary'}]}); if(!v) return; setDeleted([p.c],true); toast('Silindi — 🗑 Silinenler\'den geri alabilirsin'); }
-  if(!list.length){ lb.close(); return; } if(list.some(x=>x.c===p.c)) return renderLb(); cur=Math.max(0,Math.min(k0,list.length-1)); curCode=list[cur].c; idx=0; renderLb(); };
+  const NL=nav(); if(!NL.length){ lb.close(); return; } if(NL.some(x=>x.c===p.c)) return renderLb(); cur=Math.max(0,Math.min(k0,NL.length-1)); curCode=NL[cur].c; idx=0; renderLb(); };
 $('#bDel').onclick=async()=>{ const keys=[...picked]; if(!keys.length) return; const restore=ui.sel==='__trash';
   if(!restore){ const v=await ask({title:`${keys.length} gönderi silinsin mi?`,body:'Seçilen gönderiler <b>🗑 Silinenler</b> bölümüne gider; oradan geri yükleyebilirsin. Dosyaları diskte durur.',buttons:[{label:'Vazgeç',v:null},{label:'Sil',v:1,cls:'primary'}]}); if(!v) return; }
   setDeleted(keys,!restore); picked.clear(); updateBulk(); toast(restore?`${keys.length} gönderi geri yüklendi`:`${keys.length} gönderi silindi`); };
