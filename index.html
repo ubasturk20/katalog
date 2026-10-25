@@ -6,6 +6,8 @@
 <title>UB Medya Arsiv</title>
 <meta name="robots" content="noindex,nofollow">
 <meta name="referrer" content="no-referrer">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{
   --bg:#f6f2ec; --panel:#fffdf9; --side:#fbf8f3; --ink:#2b2119; --muted:#7a6a5c; --line:#e4dbcf;
@@ -214,6 +216,62 @@ body.filedrag::after{content:'Dosyaları buraya bırak → kataloğa ekle';posit
   .lbg{grid-template-columns:1fr;grid-template-rows:58vh auto;overflow:auto}
   .stage img,.stage video{max-height:54vh}
 }
+
+/* ===== v2 görünüm: minimal / swiss, hafif cam ===== */
+:root{--glass:rgba(255,252,246,.72);--glass-line:rgba(43,33,25,.08);--blur:saturate(1.25) blur(14px)}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15120e; --panel:#1e1914; --side:#191510; --ink:#ece3d4; --muted:#a4977f; --line:#2e2720; --chip:#29221b; --accent-soft:#3a2a1b;
+    --glass:rgba(30,25,20,.62);--glass-line:rgba(255,248,238,.08);--overlay:#0f0d0a;
+    --shadow:0 1px 1px rgba(0,0,0,.25),0 10px 28px rgba(0,0,0,.35);}
+}
+html,body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;letter-spacing:.005em}
+header{background:var(--glass);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border-bottom:1px solid var(--glass-line)}
+h1{font:600 13px/1 Inter,system-ui,sans-serif;letter-spacing:.16em;text-transform:uppercase}
+.btn{border-radius:999px;border-color:var(--glass-line);background:var(--glass);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur)}
+.btn.primary{background:var(--accent);border-color:var(--accent)}
+.search{border-radius:999px;background:var(--glass);border-color:var(--glass-line)}
+aside.side{background:var(--side)}
+.sideh b{letter-spacing:.14em;font-weight:600}
+.crumbs b{font:600 18px/1.2 "Cormorant Garamond",Georgia,serif;letter-spacing:.02em;color:var(--ink)}
+.subcat{border-radius:999px;background:var(--glass);border-color:var(--glass-line);box-shadow:none}
+.card{border-radius:16px;border:1px solid var(--glass-line);box-shadow:none;transition:transform .18s ease,box-shadow .18s ease}
+.card:hover{transform:translateY(-3px);box-shadow:var(--shadow)}
+.badge{background:rgba(20,16,12,.45);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.12)}
+.card .who b{font-weight:600}
+dialog.modal{border-radius:20px;background:var(--panel);border:1px solid var(--glass-line)}
+dialog.modal::backdrop{background:rgba(12,10,8,.5);backdrop-filter:blur(4px)}
+/* --- gönderi penceresi: ortada yüzen bir kart --- */
+dialog.lb{width:min(1180px,calc(100vw - 48px));height:calc(100dvh - 48px);margin:auto;border-radius:22px;overflow:hidden;background:var(--overlay);border:1px solid var(--glass-line);box-shadow:0 30px 90px rgba(0,0,0,.5)}
+dialog.lb::backdrop{background:rgba(12,10,8,.62);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.lbg{grid-template-columns:1fr 380px}
+.stage img,.stage video{max-height:calc(100dvh - 120px);border-radius:12px}
+.close,.nav{background:rgba(255,255,255,.12);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.14)}
+.lside{background:var(--panel);gap:16px;padding:22px}
+.lhead h2{font:600 17px/1.25 Inter,system-ui,sans-serif}
+.lside h3{letter-spacing:.14em;font-size:11px}
+.postnav{margin:0;padding:0 0 12px;border-top:0;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:8px}
+.postnav .pn{border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:999px;height:34px;padding:0 14px;font-size:13px}
+.postnav .pn:disabled{opacity:.35}
+.postnav .ppos{font-size:12px;letter-spacing:.12em;color:var(--muted)}
+.lacts .btn{height:32px}
+.lmore{border-top:1px solid var(--line);padding-top:10px}
+.lmore summary{cursor:pointer;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);list-style:none}
+.lmore summary::after{content:" ▾"}
+.lmore[open] summary::after{content:" ▴"}
+.lmorein{display:flex;flex-direction:column;gap:14px;margin-top:12px}
+@media (max-width:900px){
+  dialog.lb{width:calc(100vw - 20px);height:calc(100dvh - 28px);border-radius:20px}
+  .lbg{grid-template-columns:1fr;grid-template-rows:auto auto;overflow:auto;overscroll-behavior:contain}
+  .stage{height:min(62dvh,560px);padding:12px}
+  .stage img,.stage video{max-height:calc(min(62dvh,560px) - 24px)}
+  .lside{padding:16px 18px 22px;gap:14px}
+  .postnav{padding-bottom:10px}
+  .close{top:10px;left:10px;width:36px;height:36px;font-size:17px}
+  .card{border-radius:12px}
+  header h1{font-size:12px;letter-spacing:.14em}
+}
+.close:focus,dialog:focus{outline:none}
+.close:focus-visible{box-shadow:0 0 0 2px rgba(255,255,255,.5)}
 </style>
 </head>
 <body>
@@ -333,32 +391,45 @@ body.filedrag::after{content:'Dosyaları buraya bırak → kataloğa ekle';posit
       <div class="dots" id="dots"></div>
     </div>
     <div class="lside">
-      <div><h2 id="lbUser"></h2><div class="sub" id="lbDate"></div></div>
+      <div class="postnav"><button class="pn" id="pPrev" aria-label="Önceki gönderi">‹ Önceki</button><span class="ppos" id="pPos"></span><button class="pn" id="pNext" aria-label="Sonraki gönderi">Sonraki ›</button></div>
+      <div class="lhead"><h2 id="lbUser"></h2><div class="sub" id="lbDate"></div></div>
       <section class="capsec"><div class="full clamp" id="lbCap"></div><button class="linkbtn" id="capMore" hidden>Devamını oku ▾</button></section>
       <section><h3>Kategoriler</h3><div class="chips" id="lbCats"></div></section>
+      <div class="row lacts"><a class="btn primary sm" id="lbLink" target="_blank" rel="noopener">Instagram'da aç ↗</a><a class="btn sm" id="lbFile" target="_blank">Dosyayı aç</a><button class="btn sm" id="lbDel">🗑 Sil</button><button class="btn sm" id="lbUngroup" hidden title="Grubu çözüp gönderileri yeniden ayrı göster">▦ Grubu çöz</button></div>
+      <details class="lmore" id="lbMore"><summary>Etiketler, not ve diğer işlemler</summary><div class="lmorein">
       <section id="lbSugWrap"><h3>Önerilen kategoriler</h3><div class="chips" id="lbSug"></div></section>
       <section><h3>Etiketler</h3><div class="chips" id="lbTags"></div>
         <input class="field" id="tagIn" placeholder="Etiket ekle, Enter'a bas (örn. ceviz, raf)" style="margin-top:8px"></section>
       <section><h3>Notum</h3><textarea class="note" id="lbNote" placeholder="Bu gönderiyle ilgili notun…"></textarea></section>
-      <div class="row"><a class="btn primary sm" id="lbLink" target="_blank" rel="noopener">Instagram'da aç ↗</a><a class="btn sm" id="lbFile" target="_blank">Dosyayı aç</a><button class="btn sm" id="lbDel">🗑 Sil</button><button class="btn sm" id="lbUngroup" hidden title="Grubu çözüp gönderileri yeniden ayrı göster">▦ Grubu çöz</button></div>
       <div class="fname" id="lbName"></div>
       <div class="sub" id="lbIg"></div>
-      <div class="postnav"><button class="btn" id="pPrev">← Önceki</button><button class="btn" id="pNext">Sonraki →</button></div>
+      </div></details>
     </div>
   </div>
 </dialog>
 
 <style>
-#boot{position:fixed;inset:0;z-index:50;background:var(--bg);display:grid;place-items:center;padding:16px}
-#boot .box{width:min(420px,100%);background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:26px 22px;box-shadow:var(--shadow);text-align:center}
-#boot h2{font:600 24px/1.2 Georgia,"Times New Roman",serif;margin:0 0 6px}
-#boot p{color:var(--muted);margin:8px 0}
-#boot .go{margin-top:14px;border:0;background:var(--accent);color:var(--accent-ink);border-radius:10px;padding:11px 18px;font-weight:600;width:100%}
-#boot .bar{height:6px;background:var(--chip);border-radius:6px;overflow:hidden;margin:14px 0 4px}
-#boot .bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .25s}
-#boot details{margin-top:16px;text-align:left;color:var(--muted);font-size:13px}
-#boot input{width:100%;margin-top:6px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
-#boot .err{color:var(--danger);white-space:pre-wrap;text-align:left;font-size:13px}
+#boot{position:fixed;inset:0;z-index:50;background:#15120e;color:#e9dfcd;font-family:Inter,"Helvetica Neue",system-ui,sans-serif;display:flex;flex-direction:column;justify-content:space-between;padding:max(28px,env(safe-area-inset-top)) 28px 24px;box-sizing:border-box;overflow:auto}
+#boot .btop{display:flex;justify-content:space-between;align-items:baseline;border-top:2px solid #1b1712;padding-top:10px;width:100%;max-width:520px;margin:0 auto}
+#boot .btop b{font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase}
+#boot .btop span{font-size:12px;color:#6b6156}
+#boot .bmid{display:flex;flex-direction:column;align-items:center;gap:10px}
+#boot .bmid svg{width:min(326px,76vw);height:auto}
+#boot .arc-f{fill:none;stroke:#e9dfcd;stroke-width:2.2;stroke-dasharray:1;stroke-dashoffset:1;transform-origin:170px 170px;animation:arcDraw 5s cubic-bezier(.65,0,.25,1) infinite,arcRot 5s cubic-bezier(.65,0,.25,1) infinite}
+@keyframes arcDraw{0%{stroke-dashoffset:1}40%{stroke-dashoffset:0}70%{stroke-dashoffset:0}100%{stroke-dashoffset:-1}}
+@keyframes arcRot{0%{transform:rotate(-50deg)}40%{transform:rotate(0deg)}70%{transform:rotate(0deg)}100%{transform:rotate(50deg)}}
+@media (prefers-reduced-motion:reduce){#boot .arc-f{animation:none;stroke-dashoffset:0}}
+#boot .bline{margin:6px 0 0;font-size:13px;color:#b7a993;text-decoration:underline;text-underline-offset:3px}
+#boot #bootMsg{margin:0;font-size:11.5px;color:#6b6156;text-align:center;min-height:16px}
+#boot .bar{height:2px;width:min(220px,60vw);background:#2a241d;border-radius:2px;overflow:hidden}
+#boot .bar i{display:block;height:100%;width:0;background:#b7a993;transition:width .25s}
+#boot .err{color:#ff8a80;white-space:pre-wrap;text-align:left;font-size:13px;max-width:420px}
+#boot .go{border:0;background:#e9dfcd;color:#15120e;border-radius:10px;padding:12px 20px;font-weight:600;font-size:15px;min-width:240px}
+#boot .bbot{display:flex;justify-content:center}
+#boot details{color:#6b6156;font-size:12px;max-width:420px;width:100%}
+#boot summary{text-align:center;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;list-style:none}
+#boot details input{width:100%;margin-top:6px;padding:8px 10px;border:1px solid #3a3229;border-radius:8px;background:#1d1914;color:#e9dfcd;box-sizing:border-box}
+#boot details .go{width:100%;margin-top:10px;min-width:0}
 .cloudnote{font-size:12px;color:var(--muted)}
 #gate{position:fixed;inset:0;z-index:70;display:grid;place-items:center;padding:20px;background:radial-gradient(120% 80% at 50% 25%,#2a221a 0%,#15120e 65%);color:#ece3d4;font-family:Inter,system-ui,sans-serif;cursor:pointer;animation:gateIn .5s ease both}
 #gate.out{animation:gateOut .45s ease forwards}
@@ -375,18 +446,36 @@ body.filedrag::after{content:'Dosyaları buraya bırak → kataloğa ekle';posit
 #gate .gfoot{display:flex;justify-content:space-between;font-size:12px;color:#8c7f6c}
 #gate .ghint{margin:4px 0 0;font-size:11.5px;color:#8c7f6c;text-align:center}
 </style>
-<div id="boot"><div class="box">
-  <h2>UB Medya Arsiv</h2>
-  <p id="bootMsg">Hazırlanıyor…</p>
-  <div class="bar" id="bootBar" hidden><i></i></div>
-  <p class="err" id="bootErr" hidden></p>
-  <button class="go" id="bootLogin" hidden>Microsoft hesabımla giriş yap</button>
-  <details><summary>Ayarlar</summary>
+<div id="boot">
+  <div class="btop"><b>UB Medya Arşiv</b><span id="bootYear"></span></div>
+  <div class="bmid">
+    <svg viewBox="0 0 340 340" aria-hidden="true">
+<path class="arc-f" d="M166.2,191.7 A22,22 0 1,1 186.9,184.1" pathLength="1" style="animation-delay: 0.00s, 0.00s"></path>
+<path class="arc-f" d="M164.4,201.5 A32,32 0 1,1 194.5,190.6" pathLength="1" style="animation-delay: 0.12s, 0.12s"></path>
+<path class="arc-f" d="M162.7,211.4 A42,42 0 1,1 202.2,197.0" pathLength="1" style="animation-delay: 0.24s, 0.24s"></path>
+<path class="arc-f" d="M161.0,221.2 A52,52 0 1,1 209.8,203.4" pathLength="1" style="animation-delay: 0.36s, 0.36s"></path>
+<path class="arc-f" d="M159.2,231.1 A62,62 0 1,1 217.5,209.9" pathLength="1" style="animation-delay: 0.48s, 0.48s"></path>
+<path class="arc-f" d="M157.5,240.9 A72,72 0 1,1 225.2,216.3" pathLength="1" style="animation-delay: 0.60s, 0.60s"></path>
+<path class="arc-f" d="M155.8,250.8 A82,82 0 1,1 232.8,222.7" pathLength="1" style="animation-delay: 0.72s, 0.72s"></path>
+<path class="arc-f" d="M154.0,260.6 A92,92 0 1,1 240.5,229.1" pathLength="1" style="animation-delay: 0.84s, 0.84s"></path>
+<path class="arc-f" d="M152.3,270.5 A102,102 0 1,1 248.1,235.6" pathLength="1" style="animation-delay: 0.96s, 0.96s"></path>
+<path class="arc-f" d="M150.6,280.3 A112,112 0 1,1 255.8,242.0" pathLength="1" style="animation-delay: 1.08s, 1.08s"></path>
+<path class="arc-f" d="M148.8,290.1 A122,122 0 1,1 263.5,248.4" pathLength="1" style="animation-delay: 1.20s, 1.20s"></path>
+<path class="arc-f" d="M147.1,300.0 A132,132 0 1,1 271.1,254.8" pathLength="1" style="animation-delay: 1.32s, 1.32s"></path>
+<path class="arc-f" d="M145.3,309.8 A142,142 0 1,1 278.8,261.3" pathLength="1" style="animation-delay: 1.44s, 1.44s"></path>
+    </svg>
+    <p class="bline">Nefes al · dosyalar hazırlanıyor</p>
+    <p id="bootMsg">Hazırlanıyor…</p>
+    <div class="bar" id="bootBar" hidden><i></i></div>
+    <p class="err" id="bootErr" hidden></p>
+    <button class="go" id="bootLogin" hidden>Microsoft hesabımla giriş yap</button>
+  </div>
+  <div class="bbot"><details><summary>Ayarlar</summary>
     <label>OneDrive klasörü (OneDrive kökünden itibaren)<input id="bootFolder"></label>
-    <button class="go" id="bootSaveFolder" style="margin-top:10px">Kaydet ve yeniden yükle</button>
-    <button class="go" id="bootLogout" style="margin-top:8px;background:var(--chip);color:var(--ink)">Bu cihazda oturumu kapat</button>
-  </details>
-</div></div>
+    <button class="go" id="bootSaveFolder">Kaydet ve yeniden yükle</button>
+    <button class="go" id="bootLogout" style="background:#2a241d;color:#e9dfcd">Bu cihazda oturumu kapat</button>
+  </details></div>
+</div>
 <script>
 /* ===== OneDrive bağlantısı: giriş (PKCE), Graph, dosya listesi ===== */
 (()=>{
@@ -405,7 +494,7 @@ let FP=encPath(FOLDER);
 const setFolder=f=>{ FOLDER=f; FP=encPath(f); $b('bootFolder').value=f; if(window.__G) window.__G.folder=f; };
 const msg=(t,pct)=>{$b('bootMsg').textContent=t; if(pct!=null){$b('bootBar').hidden=false; $b('bootBar').firstElementChild.style.width=Math.round(pct*100)+'%';}};
 const fail=t=>{$b('bootErr').hidden=false; $b('bootErr').textContent=t; $b('bootBar').hidden=true;};
-$b('bootFolder').value=FOLDER;
+$b('bootFolder').value=FOLDER; $b('bootYear').textContent=new Date().getFullYear();
 $b('bootSaveFolder').onclick=()=>{ls.set('igweb.folder',$b('bootFolder').value.trim()||DEF_FOLDER); location.reload();};
 $b('bootLogout').onclick=()=>{ls.del('igweb.tok'); location.href=AUTH+'/logout?post_logout_redirect_uri='+encodeURIComponent(REDIRECT);};
 
@@ -496,7 +585,7 @@ window.__G={full,putCatalog,fetchCatalog,MAP,folder:FOLDER,
 function showGate(){ try{ if(sessionStorage.getItem('ub.gate')) return; }catch{}
   const g=document.createElement('div'); g.id='gate'; g.setAttribute('role','dialog'); g.setAttribute('aria-label','Giriş');
   g.innerHTML=`<form class="gcard" onsubmit="return false">
-    <div class="gmark"><svg width="64" height="64" viewBox="0 0 200 200" aria-hidden="true"><path d="M139,32.4 A78,78 0 1,1 113.5,23.2" fill="none" stroke="#ece3d4" stroke-width="12" stroke-linecap="round"/></svg>
+    <div class="gmark"><svg width="72" height="72" viewBox="0 0 340 340" aria-hidden="true"><path d="M164.4,201.5 A32,32 0 1,1 194.5,190.6" fill="none" stroke="#ece3d4" stroke-width="7"/><path d="M161.0,221.2 A52,52 0 1,1 209.8,203.4" fill="none" stroke="#ece3d4" stroke-width="7"/><path d="M157.5,240.9 A72,72 0 1,1 225.2,216.3" fill="none" stroke="#ece3d4" stroke-width="7"/><path d="M154.0,260.6 A92,92 0 1,1 240.5,229.1" fill="none" stroke="#ece3d4" stroke-width="7"/><path d="M150.6,280.3 A112,112 0 1,1 255.8,242.0" fill="none" stroke="#ece3d4" stroke-width="7"/><path d="M147.1,300.0 A132,132 0 1,1 271.1,254.8" fill="none" stroke="#ece3d4" stroke-width="7"/></svg>
       <h2>UB Medya Arşiv</h2><p class="gsub">Arşivine hoş geldin</p></div>
     <label>Kullanıcı adı<input type="text" placeholder="kullanici@ornek.com" autocomplete="off" readonly tabindex="-1"></label>
     <label>Şifre<input type="password" placeholder="••••••••" autocomplete="off" readonly tabindex="-1"></label>
@@ -543,7 +632,7 @@ function showGate(){ try{ if(sessionStorage.getItem('ub.gate')) return; }catch{}
       else if((remote.savedAt||'')>(local.savedAt||'')){ ETAG='"eski"'; note='Bu cihazda kaydedilmemiş değişiklikler var, OneDrive\'da da daha yeni bir sürüm var. 💾 Kaydet\'e basınca hangisinin kalacağını soracağım.'; } }
     window.__D={data:veri.d.data,seeds:veri.d.seeds,note};
     const thN=Object.values(MAP).filter(e=>e.th).length; mark('Küçük resim önbellekten',thN?'var, '+Math.round(thAge/36e5)+' saat önce':'yok — fotoğrafın kendisi gösterilecek');
-    $b('boot').remove(); window.__start(); mark('Katalog ekranda'); showTiming(); showGate();
+    { const bt=$b('boot'); bt.style.transition='opacity .45s'; bt.style.pointerEvents='none'; bt.style.opacity='0'; setTimeout(()=>bt.remove(),480); } window.__start(); mark('Katalog ekranda'); showTiming(); showGate();
     // küçük resim bağlantılarını arka planda, tek tek klasör tazele (12 saatte bir)
     if(thAge>12*36e5){ setTimeout(async()=>{ const N={}; const old=THC; THC=N;
       try{ for(const f of [...BK,'media','media/_kapak','media/eklenen']) await list(f,null,true);
@@ -891,7 +980,8 @@ function suggest(code){ if(!TOK) buildTok(); const mine=TOK[code], have=new Set(
 
 /* ---------- lightbox ---------- */
 const lb=$('#lb'); let cur=-1, idx=0, curCode=null;
-function openPost(code){ cur=list.findIndex(p=>p.c===code); curCode=code; idx=0; renderLb(); if(!lb.open) lb.showModal(); }
+const anim=(el,kf,ms)=>{ try{ if(!matchMedia('(prefers-reduced-motion: reduce)').matches) el.animate(kf,{duration:ms,easing:'cubic-bezier(.2,.7,.2,1)'}); }catch{} };
+function openPost(code){ cur=list.findIndex(p=>p.c===code); curCode=code; idx=0; renderLb(); if(!lb.open){ lb.showModal(); anim(lb,[{opacity:0,transform:'translateY(18px) scale(.97)'},{opacity:1,transform:'none'}],320); } $('.lbg').scrollTop=0; }
 function renderLb(){ const p=BY[curCode]; const f=p.f[idx];
   const th=f?(TH(f)||(p.pv&&!p.pv.startsWith('data:')?TH(p.pv):p.pv)||''):'';
   $('#media').innerHTML=!f?'<div class="missing" style="width:300px">Dosya yok</div>':isVid(f)?`<video controls autoplay playsinline ${th?`poster="${th}"`:''}></video>`:`<img src="${th||BLANK}" alt="">`;
@@ -910,7 +1000,7 @@ function renderLb(){ const p=BY[curCode]; const f=p.f[idx];
     $('#media').style.position='relative';
     if(fb){ $('#media').insertAdjacentHTML('beforeend',ov); $('#media').querySelector('[data-embtry]').onclick=()=>{ $('#media').innerHTML=frame()+ov.replace(/<button[^>]*>.*?<\/button>/,''); }; }
     else $('#media').innerHTML=frame()+ov; }
-  $('#pPrev').disabled=cur<=0; $('#pNext').disabled=cur<0||cur>=list.length-1; }
+  $('#pPrev').disabled=cur<=0; $('#pNext').disabled=cur<0||cur>=list.length-1; $('#pPos').textContent=cur>=0?`${cur+1} / ${list.length}`:''; }
 function renderLbMeta(){ const c=curCode, m=note(c);
   $('#lbCats').innerHTML=assigned(c).map(id=>`<span class="cchip"><i style="background:${color(id)}"></i>${esc(pathStr(id))}<button data-rm="${id}" title="Kaldır">✕</button></span>`).join('')+`<button class="btn sm" id="lbAdd">＋ Kategori</button>`;
   const sg=suggest(c); $('#lbSugWrap').hidden=!sg.length; $('#lbSug').innerHTML=sg.map(id=>`<button class="sugg" data-sg="${id}">＋ ${esc(pathStr(id))}</button>`).join('');
@@ -923,9 +1013,10 @@ $('#lbTags').addEventListener('click',e=>{ const b=e.target.closest('[data-rt]')
 $('#tagIn').addEventListener('keydown',e=>{ if(e.key!=='Enter') return; const v=e.target.value.split(',').map(s=>s.trim().replace(/^#/,'')).filter(Boolean); if(!v.length) return; snapshot(); const m=cat.meta[curCode]||(cat.meta[curCode]={}); m.tags=[...new Set([...(m.tags||[]),...v])]; e.target.value=''; changed(); renderLbMeta(); });
 let noteT; $('#lbNote').addEventListener('input',e=>{ clearTimeout(noteT); const c=curCode, v=e.target.value; noteT=setTimeout(()=>{ snapshot(); const m=cat.meta[c]||(cat.meta[c]={}); m.note=v; cleanMeta(c); changed(); },500); });
 function cleanMeta(c){ const m=cat.meta[c]; if(!m) return; if(!m.note) delete m.note; if(m.tags&&!m.tags.length) delete m.tags; if(!Object.keys(m).length) delete cat.meta[c]; }
-const step=d=>{const n=BY[curCode].f.length; if(n>1){idx=(idx+d+n)%n; renderLb();}};
-const post=d=>{const n=cur+d; if(cur>=0&&n>=0&&n<list.length){cur=n; curCode=list[n].c; idx=0; renderLb();}};
+const step=d=>{const n=BY[curCode].f.length; if(n>1){idx=(idx+d+n)%n; renderLb(); anim($('#media'),[{opacity:.2,transform:`translateX(${d*28}px)`},{opacity:1,transform:'none'}],240);}};
+const post=d=>{const n=cur+d; if(cur>=0&&n>=0&&n<list.length){cur=n; curCode=list[n].c; idx=0; renderLb(); $('.lbg').scrollTop=0; anim($('.lbg'),[{opacity:0,transform:`translateX(${d*46}px)`},{opacity:1,transform:'none'}],300);}};
 $('#prev').onclick=()=>step(-1); $('#next').onclick=()=>step(1); $('#pPrev').onclick=()=>post(-1); $('#pNext').onclick=()=>post(1); $('#close').onclick=()=>lb.close();
+lb.addEventListener('click',e=>{ if(e.target===lb) lb.close(); });
 lb.addEventListener('close',()=>{$('#media').innerHTML=''; if(curCode) refreshCard(curCode);});
 lb.addEventListener('keydown',e=>{ if(e.target.matches('input,textarea')) return;
   if(e.key==='ArrowRight'){e.preventDefault(); BY[curCode].f.length>1?step(1):post(1);} if(e.key==='ArrowLeft'){e.preventDefault(); BY[curCode].f.length>1?step(-1):post(-1);}
@@ -1011,6 +1102,8 @@ $('#addGo').onclick=async()=>{
 function setDeleted(keys,on){ keys=expandG(keys); snapshot(); cat.deleted=cat.deleted||{}; const t=new Date().toISOString(); keys.forEach(k=>{ if(on) cat.deleted[k]=t; else delete cat.deleted[k]; }); changed(); }
 $('#lbUngroup').onclick=()=>{ const p=BY[curCode]; if(!p||!p.grp) return; const first=p.members[0]; snapshot(); const G={...groupsOf()}; delete G[p.grp]; cat.meta[GK]=G; changed();
   cur=list.findIndex(x=>x.c===first); curCode=first; idx=0; if(cur<0){ lb.close(); } else renderLb(); toast('Grup çözüldü'); };
+try{ $('#lbMore').open=localStorage.getItem('ub.lbMore')==='1'; }catch{}
+$('#lbMore').addEventListener('toggle',()=>{ try{ localStorage.setItem('ub.lbMore',$('#lbMore').open?'1':'0'); }catch{} });
 $('#capMore').onclick=()=>{ const open=$('#lbCap').classList.toggle('clamp'); $('#capMore').textContent=open?'Devamını oku ▾':'Daha az ▴'; };
 $('#lbDel').onclick=async()=>{ const p=BY[curCode]; if(!p) return; const k0=list.findIndex(x=>x.c===p.c);
   if(isDel(p.c)){ setDeleted([p.c],false); toast('Geri yüklendi'); }
