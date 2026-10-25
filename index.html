@@ -464,7 +464,6 @@ dialog.lb::backdrop{background:rgba(12,10,8,.62);backdrop-filter:blur(10px);-web
 <path class="arc-f" d="M147.1,300.0 A132,132 0 1,1 271.1,254.8" pathLength="1" style="animation-delay: 1.32s, 1.32s"></path>
 <path class="arc-f" d="M145.3,309.8 A142,142 0 1,1 278.8,261.3" pathLength="1" style="animation-delay: 1.44s, 1.44s"></path>
     </svg>
-    <p class="bline">Nefes al · dosyalar hazırlanıyor</p>
     <p id="bootMsg">Hazırlanıyor…</p>
     <div class="bar" id="bootBar" hidden><i></i></div>
     <p class="err" id="bootErr" hidden></p>
@@ -590,8 +589,7 @@ function showGate(){ try{ if(sessionStorage.getItem('ub.gate')) return; }catch{}
     <label>Kullanıcı adı<input type="text" placeholder="kullanici@ornek.com" autocomplete="off" readonly tabindex="-1"></label>
     <label>Şifre<input type="password" placeholder="••••••••" autocomplete="off" readonly tabindex="-1"></label>
     <div class="gfoot"><span>☐ Beni hatırla</span><span>Şifremi unuttum</span></div>
-    <button type="button" class="gbtn">Giriş yap</button>
-    <p class="ghint">Önizleme · devam etmek için herhangi bir yere dokun</p></form>`;
+    <button type="button" class="gbtn">Giriş yap</button></form>`;
   const close=()=>{ if(g.classList.contains('out')) return; g.classList.add('out'); try{ sessionStorage.setItem('ub.gate','1'); }catch{} setTimeout(()=>g.remove(),500); };
   g.addEventListener('click',close); g.addEventListener('keydown',close); document.body.appendChild(g); g.tabIndex=-1; g.focus(); }
 /* --- açılış --- */
