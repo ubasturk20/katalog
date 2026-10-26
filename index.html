@@ -252,6 +252,8 @@ dialog.lb::backdrop{background:rgba(12,10,8,.62);backdrop-filter:blur(10px);-web
 .postnav{margin:0;padding:0 0 12px;border-top:0;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:8px}
 .postnav .pn{border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:999px;height:34px;padding:0 14px;font-size:13px}
 .postnav .pn:disabled{opacity:.35}
+.postnav .pmode{padding:0;width:34px;flex:none;font-size:15px}
+.postnav .pmode.on{border-color:var(--accent)}
 .postnav .ppos{font-size:12px;letter-spacing:.1em;color:var(--muted);flex:1;min-width:0;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lacts .btn{height:32px}
 .lmore{border-top:1px solid var(--line);padding-top:10px}
@@ -283,6 +285,13 @@ dialog.lb::backdrop{background:rgba(12,10,8,.62);backdrop-filter:blur(10px);-web
 .lfav svg{stroke:var(--ink)}
 .lfav.on{border-color:#e5484d}
 @media (max-width:900px){ .fav{width:30px;height:30px;right:6px;bottom:6px} .fav svg{width:16px;height:16px} }
+
+/* altyazı */
+.subov{position:absolute;z-index:3;display:flex;justify-content:center;pointer-events:none;padding:0 6%;box-sizing:border-box;text-align:center}
+.subov span{font-family:Inter,system-ui,sans-serif;font-weight:600;line-height:1.62;color:#fff;background:rgba(10,8,6,.66);padding:.12em .5em;border-radius:.35em;-webkit-box-decoration-break:clone;box-decoration-break:clone;text-shadow:0 1px 2px rgba(0,0,0,.5)}
+.ccbtn{position:absolute;top:14px;right:14px;z-index:4;height:32px;min-width:44px;padding:0 10px;border-radius:999px;border:1px solid rgba(255,255,255,.22);background:rgba(20,16,12,.45);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:#fff;font:700 12px/1 Inter,system-ui,sans-serif;letter-spacing:.06em;cursor:pointer}
+.ccbtn.off{opacity:.55;text-decoration:line-through}
+@media (max-width:900px){ .ccbtn{top:10px;right:10px} }
 </style>
 </head>
 <body>
@@ -400,9 +409,11 @@ dialog.lb::backdrop{background:rgba(12,10,8,.62);backdrop-filter:blur(10px);-web
       <div id="media"></div>
       <button class="nav next" id="next" aria-label="Sonraki görsel">›</button>
       <div class="dots" id="dots"></div>
+      <button class="ccbtn" id="ccBtn" hidden aria-label="Altyazıyı gizle" aria-pressed="true">CC</button>
+      <div class="subov" id="subov" hidden><span id="subtx"></span></div>
     </div>
     <div class="lside">
-      <div class="postnav"><button class="pn" id="pPrev" aria-label="Önceki gönderi">‹ Önceki</button><span class="ppos" id="pPos"></span><button class="pn" id="pNext" aria-label="Sonraki gönderi">Sonraki ›</button></div>
+      <div class="postnav"><button class="pn" id="pPrev" aria-label="Önceki gönderi">‹ Önceki</button><span class="ppos" id="pPos"></span><button class="pn pmode" id="pMode" aria-label="Gezinme sırası">🔀</button><button class="pn" id="pNext" aria-label="Sonraki gönderi">Sonraki ›</button></div>
       <div class="lhead"><div><h2 id="lbUser"></h2><div class="sub" id="lbDate"></div></div><button class="lfav" id="lbFav" aria-label="Favorilere ekle" aria-pressed="false"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 20.5s-7.5-4.6-9.6-9.2C.9 7.9 3 4.5 6.4 4.5c2.1 0 3.6 1.2 4.4 2.5h2.4c.8-1.3 2.3-2.5 4.4-2.5 3.4 0 5.5 3.4 4 6.8-2.1 4.6-9.6 9.2-9.6 9.2z"/></svg></button></div>
       <section class="capsec"><div class="full clamp" id="lbCap"></div><button class="linkbtn" id="capMore" hidden>Devamını oku ▾</button><button class="linkbtn" id="capOrig" hidden>Orijinal metni göster</button></section>
       <section><h3>Kategoriler</h3><div class="chips" id="lbCats"></div></section>
@@ -707,6 +718,17 @@ const isFav=c=>assigned(c).includes(FAV);
 function toggleFav(c){ const on=!isFav(c); snapshot(); if(on&&!cat.nodes[FAV]) cat.nodes[FAV]={id:FAV,name:'Favoriler',parent:null,color:'#c0392b'};
   expandG([c]).forEach(k=>{ const a=(cat.assign[k]||[]).filter(id=>cat.nodes[id]); if(on){ if(!a.includes(FAV)) a.push(FAV); cat.assign[k]=a; } else { const b=a.filter(id=>id!==FAV); if(b.length) cat.assign[k]=b; else delete cat.assign[k]; } });
   changed(); toast(on?'♥ Favorilere eklendi':'Favorilerden çıkarıldı'); if(lb.open&&curCode) renderLb(); }
+/* ---- Türkçe altyazı (p.st = [[başlangıç, bitiş, metin], …]) ---- */
+let subsOn=(()=>{ try{ return localStorage.getItem('ub.subs')!=='0'; }catch{ return true; } })(); let subRAF=0, subCues=null, subTok=0;
+function subStop(){ cancelAnimationFrame(subRAF); subRAF=0; subCues=null; $('#subov').hidden=true; $('#ccBtn').hidden=true; }
+function subStart(cues){ subStop(); const v=$('#media video'); if(!v||!cues||!cues.length) return; subCues=cues; $('#ccBtn').hidden=false;
+  const b=$('#ccBtn'); b.classList.toggle('off',!subsOn); b.setAttribute('aria-pressed',subsOn); b.setAttribute('aria-label',subsOn?'Altyazıyı gizle':'Altyazıyı göster');
+  let last=null; const ov=$('#subov'), tx=$('#subtx'), st=$('#stage');
+  const tick=()=>{ if(!v.isConnected||subCues!==cues) return; const tm=v.currentTime; const c=subsOn?cues.find(q=>tm>=q[0]&&tm<q[1]):null; const s=c?c[2]:'';
+    if(s!==last){ tx.textContent=s; ov.hidden=!s; last=s; }
+    if(s){ const r=v.getBoundingClientRect(), R=st.getBoundingClientRect(); ov.style.left=(r.left-R.left)+'px'; ov.style.width=r.width+'px'; ov.style.bottom=(R.bottom-r.bottom+Math.max(10,r.height*.05))+'px'; ov.style.fontSize=Math.max(13,Math.min(24,r.width*.048))+'px'; }
+    subRAF=requestAnimationFrame(tick); };
+  tick(); }
 const memberAt=(p,i)=>{ if(!p.parts) return p; for(const x of p.parts){ if(i<x.n) return BY[x.c]||p; i-=x.n; } return p; };
 function normGenel(c){ // posts directly on a category that has sub-categories go into its "Genel" sub-category
   const par=new Set(); for(const id in c.nodes){ const pa=c.nodes[id].parent; if(pa&&c.nodes[pa]) par.add(pa); }
@@ -921,7 +943,7 @@ $('#crumbs').addEventListener('click',e=>{const g=e.target.closest('[data-go]');
 let subsOpen=false;
 $('#subcats').addEventListener('click',e=>{ if(e.target.closest('[data-more]')){ subsOpen=!subsOpen; renderView(); return; } const g=e.target.closest('[data-go]'); if(g) select(g.dataset.go)});
 function cardHTML(p){
-  const f=p.f[0]; const badge=p.f.length>1?`<span class="badge">▦ ${p.f.length}</span>`:((f&&isVid(f))||p.embed?'<span class="badge">▶ Video</span>':'');
+  const f=p.f[0]; const badge=p.f.length>1?`<span class="badge">▦ ${p.f.length}</span>`:((f&&isVid(f))||p.embed?`<span class="badge">▶ Video${p.st||p.stf?' · TR':''}</span>`:'');
   const th=f?(TH(f)||(p.pv?(p.pv.startsWith('data:')?p.pv:TH(p.pv)):'')):'';
   const tr=(f&&isVid(f)&&p.pv&&!p.pv.startsWith('data:'))?p.pv:f;
   const m=!f?'<div class="missing">Dosya yok</div>':th?`<img src="${th}" data-r="${String(tr).replace(/"/g,'&quot;')}" loading="lazy" alt="">`:`<div class="missing">${isVid(f)?'▶ Video':'Önizleme yok'}</div>`;
@@ -1002,10 +1024,11 @@ function scopeOf(code){ if(ui.sel&&!N(ui.sel)) return null; const a=assigned(cod
   return c.sort((x,y)=>pathOf(y).length-pathOf(x).length)[0]; }
 const nav=()=>navCat&&N(navCat)?list.filter(p=>assigned(p.c).includes(navCat)):list;
 // rastgele gezinme: açılan karttan başlayıp kapsamdaki her gönderiye karışık sırayla, her birine bir kez
-let navOrder=[];
+let navOrder=[]; let navRand=(()=>{ try{ return localStorage.getItem('ub.navMode')!=='seq'; }catch{ return true; } })();
+const buildOrder=code=>{ const all=nav().map(p=>p.c); if(!navRand) return all.includes(code)?all:[code,...all]; return [code,...shuffle(all.filter(c=>c!==code))]; };
 const shuffle=a=>{ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
 const seq=()=>{ const s=new Set(nav().map(p=>p.c)); return navOrder.filter(c=>s.has(c)||c===curCode); };
-function openPost(code){ navCat=scopeOf(code); navOrder=[code,...shuffle(nav().map(p=>p.c).filter(c=>c!==code))]; cur=0; curCode=code; idx=0; renderLb(); if(!lb.open){ lb.showModal(); anim(lb,[{opacity:0,transform:'translateY(18px) scale(.97)'},{opacity:1,transform:'none'}],320); } $('.lbg').scrollTop=0; }
+function openPost(code){ navCat=scopeOf(code); navOrder=buildOrder(code); cur=navOrder.indexOf(code); curCode=code; idx=0; renderLb(); if(!lb.open){ lb.showModal(); anim(lb,[{opacity:0,transform:'translateY(18px) scale(.97)'},{opacity:1,transform:'none'}],320); } $('.lbg').scrollTop=0; }
 function renderLb(){ const p=BY[curCode]; const f=p.f[idx];
   const th=f?(TH(f)||(p.pv&&!p.pv.startsWith('data:')?TH(p.pv):p.pv)||''):'';
   $('#media').innerHTML=!f?'<div class="missing" style="width:300px">Dosya yok</div>':isVid(f)?`<video controls autoplay playsinline ${th?`poster="${th}"`:''}></video>`:`<img src="${th||BLANK}" alt="">`;
@@ -1025,7 +1048,8 @@ function renderLb(){ const p=BY[curCode]; const f=p.f[idx];
     if(fb){ $('#media').insertAdjacentHTML('beforeend',ov); $('#media').querySelector('[data-embtry]').onclick=()=>{ $('#media').innerHTML=frame()+ov.replace(/<button[^>]*>.*?<\/button>/,''); }; }
     else $('#media').innerHTML=frame()+ov; }
   { const f=isFav(curCode), b=$('#lbFav'); b.classList.toggle('on',f); b.setAttribute('aria-pressed',f); b.setAttribute('aria-label',f?'Favorilerden çıkar':'Favorilere ekle'); }
-  const NL=seq(); cur=NL.indexOf(curCode); $('#pPrev').disabled=cur<=0; $('#pNext').disabled=cur<0||cur>=NL.length-1; const PL=nav(), pi=PL.findIndex(x=>x.c===curCode); $('#pPos').textContent=cur>=0?`🔀 ${pi>=0?pi+1:cur+1} / ${PL.length}`+(navCat&&N(navCat)&&navCat!==ui.sel?` · ${N(navCat).name}`:''):''; $('#pPos').title=navCat&&N(navCat)?pathStr(navCat):''; }
+  { const sm=memberAt(p,idx), cq=f&&isVid(f)?(sm.stf?sm.stf[f.split('/').pop()]:sm.st):null; const tk=++subTok; if(cq) setTimeout(()=>{ if(tk===subTok) subStart(cq); },0); else subStop(); }
+  const NL=seq(); cur=NL.indexOf(curCode); $('#pPrev').disabled=cur<=0; $('#pNext').disabled=cur<0||cur>=NL.length-1; const PL=nav(), pi=PL.findIndex(x=>x.c===curCode); { const m=$('#pMode'); m.textContent=navRand?'🔀':'⇢'; m.title=navRand?'Rastgele sıra – sıralıya geçmek için dokun':'Sıralı – rastgeleye geçmek için dokun'; m.classList.toggle('on',navRand); } $('#pPos').textContent=cur>=0?`${pi>=0?pi+1:cur+1} / ${PL.length}`+(navCat&&N(navCat)&&navCat!==ui.sel?` · ${N(navCat).name}`:''):''; $('#pPos').title=navCat&&N(navCat)?pathStr(navCat):''; }
 function renderLbMeta(){ const c=curCode, m=note(c);
   $('#lbCats').innerHTML=assigned(c).map(id=>`<span class="cchip"><i style="background:${color(id)}"></i>${esc(pathStr(id))}<button data-rm="${id}" title="Kaldır">✕</button></span>`).join('')+`<button class="btn sm" id="lbAdd">＋ Kategori</button>`;
   const sg=suggest(c); $('#lbSugWrap').hidden=!sg.length; $('#lbSug').innerHTML=sg.map(id=>`<button class="sugg" data-sg="${id}">＋ ${esc(pathStr(id))}</button>`).join('');
@@ -1042,7 +1066,7 @@ const step=d=>{const n=BY[curCode].f.length; if(n>1){idx=(idx+d+n)%n; renderLb()
 const post=d=>{const NL=seq(); cur=NL.indexOf(curCode); const n=cur+d; if(cur>=0&&n>=0&&n<NL.length){cur=n; curCode=NL[n]; idx=0; renderLb(); $('.lbg').scrollTop=0; anim($('.lbg'),[{opacity:0,transform:`translateX(${d*46}px)`},{opacity:1,transform:'none'}],300);}};
 $('#prev').onclick=()=>step(-1); $('#next').onclick=()=>step(1); $('#pPrev').onclick=()=>post(-1); $('#pNext').onclick=()=>post(1); $('#close').onclick=()=>lb.close();
 lb.addEventListener('click',e=>{ if(e.target===lb) lb.close(); });
-lb.addEventListener('close',()=>{$('#media').innerHTML=''; if(curCode) refreshCard(curCode);});
+lb.addEventListener('close',()=>{ subStop(); $('#media').innerHTML=''; if(curCode) refreshCard(curCode);});
 lb.addEventListener('keydown',e=>{ if(e.target.matches('input,textarea')) return;
   if(e.key==='ArrowRight'){e.preventDefault(); BY[curCode].f.length>1?step(1):post(1);} if(e.key==='ArrowLeft'){e.preventDefault(); BY[curCode].f.length>1?step(-1):post(-1);}
   if(e.key==='ArrowDown'||e.key==='PageDown'){e.preventDefault();post(1)} if(e.key==='ArrowUp'||e.key==='PageUp'){e.preventDefault();post(-1)} });
@@ -1129,6 +1153,8 @@ $('#lbUngroup').onclick=()=>{ const p=BY[curCode]; if(!p||!p.grp) return; const 
   { const gi=navOrder.indexOf(p.c); const ms=p.members.filter(c=>BY[c]); if(gi>=0) navOrder.splice(gi,1,...ms); else navOrder.push(...ms); } cur=navOrder.indexOf(first); curCode=first; idx=0; if(!BY[first]||!list.some(x=>x.c===first)){ lb.close(); } else renderLb(); toast('Grup çözüldü'); };
 try{ $('#lbMore').open=localStorage.getItem('ub.lbMore')==='1'; }catch{}
 $('#lbMore').addEventListener('toggle',()=>{ try{ localStorage.setItem('ub.lbMore',$('#lbMore').open?'1':'0'); }catch{} });
+$('#pMode').onclick=()=>{ navRand=!navRand; try{ localStorage.setItem('ub.navMode',navRand?'rand':'seq'); }catch{} if(curCode){ navOrder=buildOrder(curCode); } renderLb(); toast(navRand?'🔀 Rastgele sıra':'⇢ Sıralı gezinme'); };
+$('#ccBtn').onclick=e=>{ e.stopPropagation(); subsOn=!subsOn; try{ localStorage.setItem('ub.subs',subsOn?'1':'0'); }catch{} const b=$('#ccBtn'); b.classList.toggle('off',!subsOn); b.setAttribute('aria-pressed',subsOn); b.setAttribute('aria-label',subsOn?'Altyazıyı gizle':'Altyazıyı göster'); toast(subsOn?'Altyazı açık':'Altyazı kapalı'); };
 $('#lbFav').onclick=()=>{ if(curCode) toggleFav(curCode); };
 $('#capOrig').onclick=()=>{ const p=BY[curCode]; if(!p) return; const mp=memberAt(p,idx); const s=mp.capO?mp:p; const show=!$('#capOrig').dataset.o;
   $('#lbCap').textContent=show?s.capO:s.cap; $('#capOrig').dataset.o=show?'1':''; $('#capOrig').textContent=show?'Türkçesini göster':'Orijinal metni göster';
