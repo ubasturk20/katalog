@@ -651,8 +651,8 @@ function showGate(){ try{ if(sessionStorage.getItem('ub.gate')) return; }catch{}
     let note='';
     if(remote&&remote.nodes){ const r={nodes:remote.nodes,assign:remote.assign,meta:remote.meta||{},seeds:remote.seeds,custom:remote.custom||{},queue:remote.queue||[],deleted:remote.deleted||{},migr:remote.migr||{},savedAt:remote.savedAt,updated:remote.updated};
       if(!local||!dirty){ ls.set(KEY,r); ls.set('igkatalog.dirty',false); }
-      else if((remote.savedAt||'')>(local.savedAt||'')){ ETAG='"eski"'; note='Bu cihazda kaydedilmemiş değişiklikler var, OneDrive\'da da daha yeni bir sürüm var. 💾 Kaydet\'e basınca hangisinin kalacağını soracağım.'; } }
-    window.__D={data:veri.d.data,seeds:veri.d.seeds,note};
+      /* kaydedilmemiş yerel değişiklik varsa: katalog açılınca OneDrive'dakiyle otomatik birleştirilir */ }
+    window.__D={data:veri.d.data,seeds:veri.d.seeds,note,remoteRaw:(remote&&remote.nodes)?remote:null};
     const thN=Object.values(MAP).filter(e=>e.th).length; mark('Küçük resim önbellekten',thN?'var, '+Math.round(thAge/36e5)+' saat önce':'yok — fotoğrafın kendisi gösterilecek');
     { const bt=$b('boot'); bt.style.transition='opacity .45s'; bt.style.pointerEvents='none'; bt.style.opacity='0'; setTimeout(()=>bt.remove(),480); } window.__start(); mark('Katalog ekranda'); showTiming(); showGate();
     // küçük resim bağlantılarını arka planda, tek tek klasör tazele (12 saatte bir)
@@ -745,8 +745,9 @@ const ui = {open:{}, sel:'', type:'', sort:'new', q:'', acc:'', year:''}; // eve
 let undoStack=[], dirtyFile = LS.get('igkatalog.dirty', false);
 function snapshot(){undoStack.push(JSON.stringify(cat)); if(undoStack.length>60) undoStack.shift(); $('#undoBtn').disabled=false;}
 let saveT, staleTab=false; // staleTab: another tab changed the catalog after this one → never overwrite it with this tab's older copy
+let chgN=0;
 function changed(){
-  cat.updated=new Date().toISOString(); dirtyFile=true; LS.set('igkatalog.dirty',true);
+  chgN++; cat.updated=new Date().toISOString(); dirtyFile=true; LS.set('igkatalog.dirty',true);
   clearTimeout(saveT); staleTab=false; saveT=setTimeout(()=>{ if(!LS.set(KEY,cat)) toast('Tarayıcı belleğine yazılamadı — lütfen 💾 Kaydet kullan'); autoHistory(); },300);
   normGenel(cat); index(); renderTree(); renderView({keep:true}); updateStatus();
   if(window.__autoSave) window.__autoSave();
@@ -1179,34 +1180,67 @@ let autoBlocked=false;
 function catFrom(d){ return {nodes:d.nodes,assign:d.assign,meta:d.meta||{},seeds:d.seeds,custom:d.custom||{},queue:d.queue||[],deleted:d.deleted||{},migr:d.migr||{},savedAt:d.savedAt,updated:d.updated}; }
 function applyRemote(d,msg){ cat=catFrom(d); mergeSeeds(cat); dirtyFile=false; LS.set('igkatalog.dirty',false); LS.set(KEY,cat);
   if(ui.sel&&!ui.sel.startsWith('__')&&!N(ui.sel)) ui.sel=''; index(); renderTree(); renderView({keep:true}); updateStatus(); if(lb.open&&curCode&&BY[curCode]) renderLbMeta(); if(msg) toast(msg); }
+/* ---- cihazlar arası birleştirme: son ortak sürüme (base) göre 3 yönlü; base yoksa hiçbir şeyi kaybetmeyen birleşim ---- */
+const SYNC_MAPS=['nodes','assign','meta','deleted','custom','migr'];
+const jeq=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
+function mergeArr(b,l,r){ const key=x=>typeof x==='string'?x:JSON.stringify(x); const B=new Set((b||[]).map(key)), L=new Map((l||[]).map(x=>[key(x),x])), R=new Map((r||[]).map(x=>[key(x),x])); const out=[], seen=new Set();
+  for(const [k,x] of [...L,...R]){ if(seen.has(k)) continue; seen.add(k); const inL=L.has(k), inR=R.has(k), inB=B.has(k); if((inL&&inR)||((inL||inR)&&!inB)) out.push(x); } return out; }
+function mergeVal(b,l,r){ if(jeq(l,b)) return r; if(jeq(r,b)) return l; if(jeq(l,r)) return l;
+  if(Array.isArray(l)&&Array.isArray(r)) return mergeArr(Array.isArray(b)?b:[],l,r);
+  if(l&&r&&typeof l==='object'&&typeof r==='object'&&!Array.isArray(l)&&!Array.isArray(r)){ const bo=(b&&typeof b==='object'&&!Array.isArray(b))?b:{}; const o={};
+    for(const k of new Set([...Object.keys(bo),...Object.keys(l),...Object.keys(r)])){ const v=mergeVal(bo[k],l[k],r[k]); if(v!==undefined) o[k]=v; } return o; }
+  return l===undefined?r:l; }
+function merge3(base,local,remote){ const B=base||{}; const out={...remote};
+  for(const f of SYNC_MAPS){ const b=base?(B[f]||{}):{}, l=local[f]||{}, r=remote[f]||{}; const o={};
+    for(const k of new Set([...Object.keys(b),...Object.keys(l),...Object.keys(r)])){ const v=base?mergeVal(b[k],l[k],r[k]):(l[k]===undefined?r[k]:r[k]===undefined?l[k]:mergeVal(undefined,l[k],r[k])); if(v!==undefined) o[k]=v; }
+    out[f]=o; }
+  out.seeds=[...new Set([...(remote.seeds||[]),...(local.seeds||[])])];
+  out.queue=mergeArr(base?(B.queue||[]):[],local.queue||[],remote.queue||[]);
+  out.updated=[local.updated,remote.updated].filter(Boolean).sort().pop(); out.savedAt=remote.savedAt; return out; }
+const syncDB=()=>new Promise((res,rej)=>{ const q=indexedDB.open('igkatalog_sync',1); q.onupgradeneeded=()=>q.result.createObjectStore('c'); q.onsuccess=()=>res(q.result); q.onerror=()=>rej(q.error); });
+async function baseGet(){ try{ const d=await syncDB(); return await new Promise(r=>{ const q=d.transaction('c').objectStore('c').get('base'); q.onsuccess=()=>r(q.result||null); q.onerror=()=>r(null); }); }catch{ return null; } }
+async function baseSet(v){ try{ const d=await syncDB(); d.transaction('c','readwrite').objectStore('c').put(JSON.parse(JSON.stringify(v)),'base'); }catch{} }
+function setMerged(m,msg){ cat=catFrom(m); mergeSeeds(cat); normGenel(cat); LS.set(KEY,cat);
+  if(ui.sel&&!ui.sel.startsWith('__')&&!N(ui.sel)) ui.sel=''; index(); renderTree(); renderView({keep:true}); updateStatus(); if(lb.open&&curCode&&BY[curCode]) renderLbMeta(); if(msg) toast(msg); }
 $('#saveBtnM').onclick=()=>saveFile(false);
 async function saveFile(as,auto){
   if(as){ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([payload()],{type:'application/json'})); a.download='katalog.json'; a.click(); toast('Bir kopya indirildi'); return; }
+  if(saving){ saveAgain=true; return; } saving=true;
   const btn=$('#saveBtn'); btn.disabled=true; const prev=btn.textContent; if(!auto) btn.textContent='Kaydediliyor…';
   try{
-    const stamp=new Date().toISOString(); const text=()=>JSON.stringify({...cat, savedAt:stamp, app:'igkatalog', posts:DATA.length}, null, 1);
-    let r=await window.__G.putCatalog(text());
-    if(r.conflict){
-      if(auto){ autoBlocked=true; toast('OneDrive\'da başka cihazdan daha yeni bir kayıt var — 💾 Kaydet\'e basınca seçebilirsin'); return; }
-      const v=await ask({title:'OneDrive\'da daha yeni bir sürüm var',body:'Katalog başka bir cihazdan kaydedilmiş. Ne yapalım?',buttons:[{label:'Vazgeç',v:null},{label:'OneDrive\'dakini yükle',v:'load'},{label:'Benimkiyle üzerine yaz',v:'over',cls:'primary'}]});
-      if(!v) return;
-      if(v==='load'){ const d=await window.__G.fetchCatalog(); snapshot(); cat={nodes:d.nodes,assign:d.assign,meta:d.meta||{},seeds:d.seeds,custom:d.custom||{},queue:d.queue||[],deleted:d.deleted||{},migr:d.migr||{},savedAt:d.savedAt,updated:d.updated}; mergeSeeds(cat); ui.sel=''; changed(); dirtyFile=false; LS.set('igkatalog.dirty',false); LS.set(KEY,cat); updateStatus(); toast('OneDrive\'daki sürüm yüklendi'); return; }
-      r=await window.__G.putCatalog(text(),true);
-    }
-    cat.savedAt=stamp; dirtyFile=false; LS.set('igkatalog.dirty',false); LS.set(KEY,cat); updateStatus(); if(!auto){ autoBlocked=false; toast('OneDrive\'a kaydedildi'); }
+    for(let tur=0; tur<5; tur++){
+      const n0=chgN, stamp=new Date().toISOString(); const body={...cat, savedAt:stamp, app:'igkatalog', posts:DATA.length}; const text=JSON.stringify(body,null,1);
+      const r=await window.__G.putCatalog(text);
+      if(r.conflict){ // başka cihaz kaydetmiş: onun değişiklikleriyle birleştir, tekrar dene
+        const d=await window.__G.fetchCatalog(); if(!d) continue; const R=catFrom(d);
+        setMerged(merge3(await baseGet(),cat,R)); await baseSet(R); continue; }
+      await baseSet(catFrom(body)); cat.savedAt=stamp;
+      if(chgN===n0){ dirtyFile=false; LS.set('igkatalog.dirty',false); }
+      LS.set(KEY,cat); lastSync=Date.now(); updateStatus(); if(!auto) toast('OneDrive\'a kaydedildi'); return; }
+    if(!auto) toast('Kaydedilemedi — tekrar dene');
   }catch(e){ console.warn(e); if(!auto) toast('Kaydedilemedi — internet bağlantısını kontrol edip tekrar dene'); }
-  finally{ btn.disabled=false; btn.textContent=prev; }
+  finally{ saving=false; btn.disabled=false; btn.textContent=prev; if(saveAgain||dirtyFile){ saveAgain=false; window.__autoSave&&window.__autoSave(); } }
 }
-async function reloadSaved(){ try{ const d=await window.__G.fetchCatalog(); if(!d) return toast('OneDrive\'da henüz katalog.json yok');
-  if(dirtyFile){ const v=await ask({title:'Kaydedilmemiş değişiklikler var',body:'OneDrive\'daki sürüm yüklenirse bu değişiklikler kaybolur (Geri al ile dönebilirsin).',buttons:[{label:'Vazgeç',v:null},{label:'Yine de yükle',v:1,cls:'primary'}]}); if(!v) return; }
-  snapshot(); cat={nodes:d.nodes,assign:d.assign,meta:d.meta||{},seeds:d.seeds,custom:d.custom||{},queue:d.queue||[],deleted:d.deleted||{},migr:d.migr||{},savedAt:d.savedAt,updated:d.updated}; mergeSeeds(cat); ui.sel=''; changed(); dirtyFile=false; LS.set('igkatalog.dirty',false); LS.set(KEY,cat); updateStatus(); toast('OneDrive\'dan yenilendi'); }catch(e){ console.warn(e); toast('OneDrive okunamadı'); } }
-{ let t=null; window.__autoSave=()=>{ if(autoBlocked) return; clearTimeout(t); t=setTimeout(()=>{ if(dirtyFile) saveFile(false,true); },4000); }; }
-let pulling=false;
-async function pullRemote(){ if(dirtyFile||document.hidden||pulling) return; pulling=true;
-  try{ const tag=await window.__G.remoteTag(); if(tag&&tag!==window.__G.etag()){ const d=await window.__G.fetchCatalog(); if(d&&!dirtyFile) applyRemote(d,'Diğer cihazdaki değişiklikler alındı'); } }catch(e){ console.warn(e); }
+async function reloadSaved(){ try{ const d=await window.__G.fetchCatalog(); if(!d) return toast('OneDrive\'da henüz katalog.json yok'); const R=catFrom(d);
+  if(dirtyFile){ snapshot(); setMerged(merge3(await baseGet(),cat,R),'OneDrive\'daki sürümle birleştirildi'); await baseSet(R); saveFile(false,true); return; }
+  snapshot(); applyRemote(d,'OneDrive\'dan yenilendi'); await baseSet(R); }catch(e){ console.warn(e); toast('OneDrive okunamadı'); } }
+let saving=false, saveAgain=false, pulling=false, lastSync=0;
+{ let t=null; window.__autoSave=()=>{ clearTimeout(t); t=setTimeout(()=>{ if(dirtyFile) saveFile(false,true); },1500); }; }
+async function pullRemote(force){ if((document.hidden&&!force)||pulling||saving) return; pulling=true;
+  try{ const tag=await window.__G.remoteTag(); if(tag&&tag!==window.__G.etag()){ const d=await window.__G.fetchCatalog(); if(d){ const R=catFrom(d);
+      if(!dirtyFile){ applyRemote(d,'Diğer cihazdaki değişiklikler alındı'); await baseSet(R); }
+      else { setMerged(merge3(await baseGet(),cat,R),'Diğer cihazdaki değişikliklerle birleştirildi'); await baseSet(R); saveFile(false,true); } } }
+    lastSync=Date.now(); }catch(e){ console.warn(e); }
   pulling=false; }
-document.addEventListener('visibilitychange',()=>{ if(!document.hidden) pullRemote(); }); setInterval(pullRemote,45000);
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) pullRemote(); else if(dirtyFile) saveFile(false,true); });
+window.addEventListener('pagehide',()=>{ if(dirtyFile) saveFile(false,true); });
+window.addEventListener('online',()=>{ if(dirtyFile) saveFile(false,true); else pullRemote(); });
+setInterval(()=>{ if(dirtyFile&&!saving) saveFile(false,true); else pullRemote(); },20000);
 window.__pullRemote=pullRemote;
+// açılışta: bu cihazda OneDrive'a gitmemiş değişiklik varsa OneDrive'dakiyle birleştirip kaydet
+setTimeout(async()=>{ const R0=window.__D&&window.__D.remoteRaw; if(!R0) return; const R=catFrom(R0);
+  if(dirtyFile){ setMerged(merge3(await baseGet(),cat,R),'Bu cihazda kaydedilmemiş değişiklikler OneDrive ile birleştirildi'); await baseSet(R); saveFile(false,true); }
+  else await baseSet(R); },300);
 $('#saveBtn').onclick=()=>saveFile(false);
 document.addEventListener('keydown',e=>{ if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault(); saveFile(false);} if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'&&!e.target.matches('input,textarea')){e.preventDefault(); undo();} if(e.key==='Escape'&&selMode&&!document.querySelector('dialog[open]')) toggleSel(false); });
 $('#undoBtn').onclick=undo;
