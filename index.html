@@ -1177,7 +1177,7 @@ async function getHandle(){ try{const db=await idb(); return await new Promise(r
 async function setHandle(h){ try{const db=await idb(); db.transaction('h','readwrite').objectStore('h').put(h,'file');}catch{} }
 function payload(){ return JSON.stringify({...cat, savedAt:new Date().toISOString(), app:'igkatalog', posts:DATA.length}, null, 1); }
 let autoBlocked=false;
-function catFrom(d){ return {nodes:d.nodes,assign:d.assign,meta:d.meta||{},seeds:d.seeds,custom:d.custom||{},queue:d.queue||[],deleted:d.deleted||{},migr:d.migr||{},savedAt:d.savedAt,updated:d.updated}; }
+function catFrom(d){ const o={nodes:d.nodes,assign:d.assign,meta:d.meta||{},seeds:d.seeds,custom:d.custom||{},queue:d.queue||[],deleted:d.deleted||{},migr:d.migr||{},savedAt:d.savedAt,updated:d.updated}; if(d.syncReset) o.syncReset=d.syncReset; return o; }
 function applyRemote(d,msg){ cat=catFrom(d); mergeSeeds(cat); dirtyFile=false; LS.set('igkatalog.dirty',false); LS.set(KEY,cat);
   if(ui.sel&&!ui.sel.startsWith('__')&&!N(ui.sel)) ui.sel=''; index(); renderTree(); renderView({keep:true}); updateStatus(); if(lb.open&&curCode&&BY[curCode]) renderLbMeta(); if(msg) toast(msg); }
 /* ---- cihazlar arası birleştirme: son ortak sürüme (base) göre 3 yönlü; base yoksa hiçbir şeyi kaybetmeyen birleşim ---- */
@@ -1200,6 +1200,9 @@ function merge3(base,local,remote){ const B=base||{}; const out={...remote};
 const syncDB=()=>new Promise((res,rej)=>{ const q=indexedDB.open('igkatalog_sync',1); q.onupgradeneeded=()=>q.result.createObjectStore('c'); q.onsuccess=()=>res(q.result); q.onerror=()=>rej(q.error); });
 async function baseGet(){ try{ const d=await syncDB(); return await new Promise(r=>{ const q=d.transaction('c').objectStore('c').get('base'); q.onsuccess=()=>r(q.result||null); q.onerror=()=>r(null); }); }catch{ return null; } }
 async function baseSet(v){ try{ const d=await syncDB(); d.transaction('c','readwrite').objectStore('c').put(JSON.parse(JSON.stringify(v)),'base'); }catch{} }
+// OneDrive'daki dosya bilerek 'esas sürüm' yapıldıysa (syncReset değişti): birleştirme yapma, onu aynen al
+const isReset=R=>!!(R&&R.syncReset&&R.syncReset!==cat.syncReset);
+async function mergeOrReset(R,msg){ if(isReset(R)){ applyRemote(R,'OneDrive\'daki esas sürüm yüklendi'); await baseSet(R); return false; } setMerged(merge3(await baseGet(),cat,R),msg); await baseSet(R); return true; }
 function setMerged(m,msg){ cat=catFrom(m); mergeSeeds(cat); normGenel(cat); LS.set(KEY,cat);
   if(ui.sel&&!ui.sel.startsWith('__')&&!N(ui.sel)) ui.sel=''; index(); renderTree(); renderView({keep:true}); updateStatus(); if(lb.open&&curCode&&BY[curCode]) renderLbMeta(); if(msg) toast(msg); }
 $('#saveBtnM').onclick=()=>saveFile(false);
@@ -1213,7 +1216,7 @@ async function saveFile(as,auto){
       const r=await window.__G.putCatalog(text);
       if(r.conflict){ // başka cihaz kaydetmiş: onun değişiklikleriyle birleştir, tekrar dene
         const d=await window.__G.fetchCatalog(); if(!d) continue; const R=catFrom(d);
-        setMerged(merge3(await baseGet(),cat,R)); await baseSet(R); continue; }
+        await mergeOrReset(R); if(!dirtyFile) return; continue; }
       await baseSet(catFrom(body)); cat.savedAt=stamp;
       if(chgN===n0){ dirtyFile=false; LS.set('igkatalog.dirty',false); }
       LS.set(KEY,cat); lastSync=Date.now(); updateStatus(); if(!auto) toast('OneDrive\'a kaydedildi'); return; }
@@ -1222,14 +1225,14 @@ async function saveFile(as,auto){
   finally{ saving=false; btn.disabled=false; btn.textContent=prev; if(saveAgain||dirtyFile){ saveAgain=false; window.__autoSave&&window.__autoSave(); } }
 }
 async function reloadSaved(){ try{ const d=await window.__G.fetchCatalog(); if(!d) return toast('OneDrive\'da henüz katalog.json yok'); const R=catFrom(d);
-  if(dirtyFile){ snapshot(); setMerged(merge3(await baseGet(),cat,R),'OneDrive\'daki sürümle birleştirildi'); await baseSet(R); saveFile(false,true); return; }
+  if(dirtyFile){ snapshot(); if(await mergeOrReset(R,'OneDrive\'daki sürümle birleştirildi')) saveFile(false,true); return; }
   snapshot(); applyRemote(d,'OneDrive\'dan yenilendi'); await baseSet(R); }catch(e){ console.warn(e); toast('OneDrive okunamadı'); } }
 let saving=false, saveAgain=false, pulling=false, lastSync=0;
 { let t=null; window.__autoSave=()=>{ clearTimeout(t); t=setTimeout(()=>{ if(dirtyFile) saveFile(false,true); },1500); }; }
 async function pullRemote(force){ if((document.hidden&&!force)||pulling||saving) return; pulling=true;
   try{ const tag=await window.__G.remoteTag(); if(tag&&tag!==window.__G.etag()){ const d=await window.__G.fetchCatalog(); if(d){ const R=catFrom(d);
       if(!dirtyFile){ applyRemote(d,'Diğer cihazdaki değişiklikler alındı'); await baseSet(R); }
-      else { setMerged(merge3(await baseGet(),cat,R),'Diğer cihazdaki değişikliklerle birleştirildi'); await baseSet(R); saveFile(false,true); } } }
+      else { if(await mergeOrReset(R,'Diğer cihazdaki değişikliklerle birleştirildi')) saveFile(false,true); } } }
     lastSync=Date.now(); }catch(e){ console.warn(e); }
   pulling=false; }
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden) pullRemote(); else if(dirtyFile) saveFile(false,true); });
@@ -1239,7 +1242,7 @@ setInterval(()=>{ if(dirtyFile&&!saving) saveFile(false,true); else pullRemote()
 window.__pullRemote=pullRemote;
 // açılışta: bu cihazda OneDrive'a gitmemiş değişiklik varsa OneDrive'dakiyle birleştirip kaydet
 setTimeout(async()=>{ const R0=window.__D&&window.__D.remoteRaw; if(!R0) return; const R=catFrom(R0);
-  if(dirtyFile){ setMerged(merge3(await baseGet(),cat,R),'Bu cihazda kaydedilmemiş değişiklikler OneDrive ile birleştirildi'); await baseSet(R); saveFile(false,true); }
+  if(dirtyFile){ if(await mergeOrReset(R,'Bu cihazda kaydedilmemiş değişiklikler OneDrive ile birleştirildi')) saveFile(false,true); }
   else await baseSet(R); },300);
 $('#saveBtn').onclick=()=>saveFile(false);
 document.addEventListener('keydown',e=>{ if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault(); saveFile(false);} if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'&&!e.target.matches('input,textarea')){e.preventDefault(); undo();} if(e.key==='Escape'&&selMode&&!document.querySelector('dialog[open]')) toggleSel(false); });
