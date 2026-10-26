@@ -573,7 +573,9 @@ async function list(rel,onPage,thumbs){ const ps=performance.now(); if(!thumbs) 
     onPage&&onPage(); if(j['@odata.nextLink']){ const r=await graph(j['@odata.nextLink']); if(!r.ok) throw new Error(rel+' sayfası alınamadı ('+r.status+')'); await take(await r.json()); } }
 }
 const isImgF=r=>/\.(jpe?g|png|webp|gif|heic)$/i.test(r);
-async function full(rel){ const e=MAP[rel]; if(!e) return '';
+async function full(rel){ let e=MAP[rel];
+  if(!e){ // liste önbelleğinde yok (yeni eklenmiş olabilir): doğrudan yoldan sor
+    try{ const it=await item(rel); if(!it) return ''; const u=it['@microsoft.graph.downloadUrl']||it['@content.downloadUrl']; e=MAP[rel]={id:it.id,dl:u||'',t:Date.now(),th:''}; cset('mapc',null); if(u) return u; }catch(err){ console.warn(err); return ''; } }
   if(e.dl&&Date.now()-e.t<45*60e3) return e.dl;
   try{ const r=await graph(`/me/drive/items/${e.id}`); if(r.ok){ const j=await r.json(); const u=j['@microsoft.graph.downloadUrl']||j['@content.downloadUrl']; if(u){ e.dl=u; e.t=Date.now(); return u; } } }catch(err){ console.warn(err); }
   // fallback: stream the file through Graph and show it from memory
@@ -1033,7 +1035,7 @@ function renderLb(){ const p=BY[curCode]; const f=p.f[idx];
   const th=f?(TH(f)||(p.pv&&!p.pv.startsWith('data:')?TH(p.pv):p.pv)||''):'';
   $('#media').innerHTML=!f?'<div class="missing" style="width:300px">Dosya yok</div>':isVid(f)?`<video controls autoplay playsinline ${th?`poster="${th}"`:''}></video>`:`<img src="${th||BLANK}" alt="">`;
   const el=$('#media').firstElementChild, want=curCode+'|'+idx;
-  if(f) window.__G.full(f).then(u=>{ if(curCode+'|'+idx!==want||!el.isConnected) return; if(!u){ if(!th) $('#media').innerHTML='<div class="missing" style="width:320px;color:#ddd;text-align:center">Dosya OneDrive\'da bulunamadı</div>'; return; } el.src=u; $('#lbFile').href=u; });
+  if(f) window.__G.full(f).then(u=>{ if(curCode+'|'+idx!==want||!el.isConnected) return; if(!u){ $('#media').innerHTML='<div class="missing" style="width:320px;color:#ddd;text-align:center;line-height:1.5">Bu dosya OneDrive\'da henüz yok.<br>Eşitleme/yükleme bitince açılır.</div>'; return; } el.src=u; $('#lbFile').href=u; });
   el?.addEventListener?.('error',()=>{$('#media').innerHTML=`<div class="missing" style="width:320px;color:#ddd;text-align:center">${f&&isVid(f)?'Video bu tarayıcıda oynatılamadı.<br>“Dosyayı aç” ile varsayılan oynatıcıda açabilirsin.':'Dosya bulunamadı'}</div>`});
   $('#prev').hidden=$('#next').hidden=p.f.length<2; $('#dots').innerHTML=p.f.length>1?p.f.map((_,j)=>`<i class="${j===idx?'on':''}"></i>`).join(''):'';
   const mp=memberAt(p,idx); $('#lbUser').textContent=uname(mp); $('#lbDate').textContent=[fmtDate(p.t),typeLabel[p.m],p.f.length>1?`${idx+1}/${p.f.length}`:''].filter(Boolean).join(' · ');
