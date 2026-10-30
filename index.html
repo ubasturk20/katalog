@@ -320,7 +320,8 @@ dialog.lb::backdrop{background:rgba(12,10,8,.62);backdrop-filter:blur(10px);-web
       <button data-a="saveas">⬇ Bir kopyasını indir</button>
       <button data-a="csv">📄 Excel için CSV dışa aktar</button>
       <button data-a="history">🕘 Otomatik yedekler…</button>
-      <button data-a="reset">↺ Instagram koleksiyonlarına sıfırla…</button>
+      <button data-a="logout">↪ Oturumu kapat / hesap değiştir…</button>
+<button data-a="reset">↺ Instagram koleksiyonlarına sıfırla…</button>
     </div>
   </div>
   <input type="file" id="fileIn" accept=".json,application/json" hidden>
@@ -517,6 +518,7 @@ const msg=(t,pct)=>{$b('bootMsg').textContent=t; if(pct!=null){$b('bootBar').hid
 const fail=t=>{$b('bootErr').hidden=false; $b('bootErr').textContent=t; $b('bootBar').hidden=true;};
 $b('bootFolder').value=FOLDER; $b('bootYear').textContent=new Date().getFullYear();
 $b('bootSaveFolder').onclick=()=>{ls.set('igweb.folder',$b('bootFolder').value.trim()||DEF_FOLDER); location.reload();};
+window.__logout=()=>{ls.del('igweb.tok'); location.href=AUTH+'/logout?post_logout_redirect_uri='+encodeURIComponent(REDIRECT);};
 $b('bootLogout').onclick=()=>{ls.del('igweb.tok'); location.href=AUTH+'/logout?post_logout_redirect_uri='+encodeURIComponent(REDIRECT);};
 
 /* --- PKCE --- */
@@ -1254,6 +1256,7 @@ $('#menu').addEventListener('click',async e=>{ const a=e.target.closest('[data-a
   if(a==='reload') reloadSaved();
   if(a==='saveas') saveFile(true);
   if(a==='csv') exportCSV();
+  if(a==='logout'){ const v=await ask({title:'Oturum kapatılsın mı?',body:'Bu cihazda Microsoft oturumu kapanır; sonra istediğin hesapla yeniden giriş yaparsın. Kaydedilmemiş değişiklik varsa önce OneDrive’a kaydedilir.',buttons:[{label:'Vazgeç',v:null},{label:'Oturumu kapat',v:1,cls:'primary'}]}); if(v){ try{ if(dirtyFile) await saveFile(false,true); }catch(e){} window.__logout(); } }
   if(a==='history') showHistory();
   if(a==='reset'){ const v=await ask({title:'Instagram koleksiyonlarına sıfırla?',body:'Tüm kategori düzenlemelerin, notların ve etiketlerin başlangıç durumuna döner. Bilgisayardan eklediğin gönderiler ve indirilecekler listesi korunur. (Geri al ile geri getirebilirsin.)',buttons:[{label:'Vazgeç',v:null},{label:'Sıfırla',v:1,cls:'primary'}]}); if(v){ snapshot(); const keep={custom:cat.custom||{},queue:cat.queue||[],deleted:cat.deleted||{}}; cat=fresh(); Object.assign(cat,keep); mergeSeeds(cat); ui.sel=''; changed(); } }
 });
