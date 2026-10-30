@@ -501,7 +501,7 @@ dialog.lb::backdrop{background:rgba(12,10,8,.62);backdrop-filter:blur(10px);-web
 /* ===== OneDrive bağlantısı: giriş (PKCE), Graph, dosya listesi ===== */
 (()=>{
 const CLIENT_ID='a6af8a6d-ae2c-4426-8441-82cd0f4331ac';
-const FOLDERS=['Dropbox Backup 28.06.2026/6-UB/UB Medya Arsiv - 10.10.26/tum gonderiler','Dropbox Backup 28.06.2026/6-UB/instagram saved, from claude 10.10.26/tum gonderiler'];
+const FOLDERS=['Claude Workspace/UB Medya Arsiv - 10.10.26/tum gonderiler','Dropbox Backup 28.06.2026/6-UB/UB Medya Arsiv - 10.10.26/tum gonderiler','Dropbox Backup 28.06.2026/6-UB/instagram saved, from claude 10.10.26/tum gonderiler'];
 const DEF_FOLDER=FOLDERS[0];
 const SCOPES='Files.ReadWrite User.Read offline_access';
 const AUTH='https://login.microsoftonline.com/consumers/oauth2/v2.0';
@@ -631,7 +631,7 @@ function showGate(){ try{ if(sessionStorage.getItem('ub.gate')) return; }catch{}
 
     mark('Giriş/oturum hazır'); msg('Katalog verisi okunuyor…',.05);
     let vi=await item('katalog_veri.json');
-    if(!vi&&!ls.get('igweb.folder',null)){ for(const f of FOLDERS){ if(f===FOLDER) continue; setFolder(f); vi=await item('katalog_veri.json'); if(vi) break; } if(!vi) setFolder(DEF_FOLDER); }
+    if(!vi&&(!ls.get('igweb.folder',null)||FOLDERS.includes(ls.get('igweb.folder',null)))){ for(const f of FOLDERS){ if(f===FOLDER) continue; setFolder(f); vi=await item('katalog_veri.json'); if(vi) break; } if(!vi) setFolder(DEF_FOLDER); }
     if(!vi) throw new Error(`“${FOLDER}/katalog_veri.json” OneDrive'da bulunamadı.\nKlasör adı farklıysa aşağıdaki Ayarlar'dan düzelt. Yükleme sürüyorsa biraz sonra tekrar dene.`);
     mark('Veri dosyası bilgisi alındı'); let veri=await cget('veri'); let vc='telefondaki kayıttan'; if(!veri||veri.tag!==vi.cTag){ vc='OneDrive\'dan indirildi, '+(vi.size/1e6).toFixed(1)+' MB'; msg('Katalog verisi indiriliyor ('+(vi.size/1e6).toFixed(1)+' MB)…',.1); veri={tag:vi.cTag,d:JSON.parse(await getText(vi))}; cset('veri',veri); }
     mark('Katalog verisi hazır',vc);
