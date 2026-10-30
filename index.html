@@ -292,6 +292,74 @@ dialog.lb::backdrop{background:rgba(12,10,8,.62);backdrop-filter:blur(10px);-web
 .ccbtn{position:absolute;top:14px;right:14px;z-index:4;height:32px;min-width:44px;padding:0 10px;border-radius:999px;border:1px solid rgba(255,255,255,.22);background:rgba(20,16,12,.45);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:#fff;font:700 12px/1 Inter,system-ui,sans-serif;letter-spacing:.06em;cursor:pointer}
 .ccbtn.off{opacity:.55;text-decoration:line-through}
 @media (max-width:900px){ .ccbtn{top:10px;right:10px} }
+
+/* ===== v3 yan menü: minimal / swiss (31 Ekim 2026) ===== */
+@media (min-width:901px){ .app{grid-template-columns:248px 1fr} }
+aside.side{padding:14px 10px 48px;border-right:1px solid var(--glass-line);scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+.sidetop{display:none}
+.sep{height:0;margin:14px 8px;border-top:1px solid var(--glass-line);background:none}
+.sideh{padding:2px 8px 8px;align-items:center}
+.sideh b{font-size:10.5px;font-weight:600;letter-spacing:.18em;color:var(--muted)}
+.addroot{display:inline-flex;align-items:center;gap:4px;height:24px;padding:0 9px 0 6px;border:1px solid var(--glass-line);border-radius:999px;background:transparent;color:var(--muted);font-size:11.5px;letter-spacing:.02em}
+.addroot:hover{color:var(--ink);border-color:var(--line);background:var(--chip)}
+.tree ul{padding-left:10px;margin-left:15px;border-left:1px solid var(--glass-line)}
+.node{gap:8px;padding:0 8px;min-height:32px;border-radius:8px;transition:background .12s ease,color .12s ease}
+#tree .node{padding:0 6px 0 2px}
+.node:hover{background:color-mix(in srgb,var(--chip) 70%,transparent)}
+.node.sel{background:var(--chip);box-shadow:none}
+.node.sel::before{content:"";position:absolute;left:-6px;top:9px;bottom:9px;width:2px;border-radius:2px;background:var(--accent)}
+.nname,#tree .nname{font-size:13.5px;font-weight:450;color:var(--ink)}
+.special .node{font-weight:inherit}
+.special .nname{font-size:13.5px}
+.node.sel .nname{font-weight:600}
+.sico{display:inline-flex;width:20px;justify-content:center;color:var(--muted);flex:none}
+.node.sel .sico{color:var(--accent)}
+.ncount,.node:hover .ncount,.node.sel .ncount{font-size:11.5px;color:var(--muted);background:none;padding:0;font-variant-numeric:tabular-nums;letter-spacing:.01em}
+.node.sel .ncount{color:var(--ink)}
+.special .node[data-sp="__trash"] .ncount{color:var(--muted)}
+.caret{width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;border-radius:5px;color:var(--muted);transition:transform .15s ease}
+.caret.open{transform:rotate(90deg)}
+.caret:hover{color:var(--ink)}
+.dot{width:7px;height:7px;border-radius:50%;opacity:.9}
+.nact{gap:0}
+.nact button{width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;border-radius:6px}
+.node:hover .ncount,.node.sel .ncount{display:inline}
+#syncBtnM{display:none}
+@media (min-width:901px) and (hover:hover){ .node.sel:not(:hover) .nact{display:none} }
+.tags-side{gap:6px;padding:2px 8px}
+.tagbtn{border-color:var(--glass-line);background:transparent;font-size:12px;padding:3px 10px;color:var(--ink)}
+.tagbtn:hover{background:var(--chip)}
+.rootdrop{border-radius:10px}
+.enso{width:20px;height:20px;color:var(--accent);flex:none}
+.iconbtn{width:38px;height:38px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--glass-line);border-radius:999px;background:var(--glass);color:var(--ink);padding:0}
+@media (max-width:900px){
+  aside.side{inset:0;width:100%;max-width:none;padding:0 18px calc(48px + env(safe-area-inset-bottom));border-right:0;box-shadow:none;
+    transform:translateX(-100%);transition:transform .28s cubic-bezier(.2,.8,.2,1)}
+  .app.sideopen aside.side{transform:none}
+  .sidetop{display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:3;margin:0 -18px 6px;padding:calc(12px + env(safe-area-inset-top)) 18px 12px;
+    background:var(--glass);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border-bottom:1px solid var(--glass-line)}
+  .sidettl{flex:1;font-size:11.5px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--ink)}
+  #sideClose{font-size:inherit;padding:0}
+  .special{margin-top:10px}
+  .node{min-height:46px;gap:10px;padding:0 10px;border-radius:12px}
+  #tree .node{padding:0 8px 0 4px}
+  .node.sel::before{left:3px;top:14px;bottom:14px}
+  #syncBtnM{display:inline-flex}
+  .nname,#tree .nname,.special .nname{font-size:16px}
+  .ncount,.node:hover .ncount,.node.sel .ncount{font-size:13px}
+  .sico svg{width:19px;height:19px}
+  .caret{width:28px;height:28px}
+  .caret svg{width:14px;height:14px}
+  .dot{width:8px;height:8px}
+  .tree ul{margin-left:18px;padding-left:12px}
+  .sideh{padding:4px 10px 10px}
+  .sideh b{font-size:11px}
+  .addroot{height:30px;font-size:13px;padding:0 12px 0 9px}
+  .nact button{width:34px;height:34px}
+  .nact button svg{width:16px;height:16px}
+  .tagbtn{font-size:13.5px;padding:5px 12px}
+  .sep{margin:16px 10px}
+}
 </style>
 </head>
 <body>
@@ -329,10 +397,10 @@ dialog.lb::backdrop{background:rgba(12,10,8,.62);backdrop-filter:blur(10px);-web
 </header>
 
 <aside class="side" id="side">
-  <div class="sidetop"><button class="btn" id="sideClose" aria-label="Menüyü kapat">← Kapat</button></div>
+  <div class="sidetop"><svg class="enso" viewBox="0 0 40 40" aria-hidden="true"><path d="M20 4.5a15.5 15.5 0 1 1-11.9 5.6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg><span class="sidettl">UB Medya Arşiv</span><button class="iconbtn" id="sideClose" aria-label="Menüyü kapat"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button></div>
   <ul class="tree special" id="special"></ul>
   <div class="sep"></div>
-  <div class="sideh"><b>Kategoriler</b><button class="btn sm" id="addRoot" title="Yeni ana kategori">＋ Ana kategori</button></div>
+  <div class="sideh"><b>Kategoriler</b><button class="addroot" id="addRoot" title="Yeni ana kategori" aria-label="Yeni ana kategori"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><span>Yeni</span></button></div>
   <ul class="tree" id="tree"></ul>
   <div class="rootdrop" id="rootdrop">Buraya bırak → ana kategori yap</div>
   <div class="sep"></div>
@@ -795,16 +863,22 @@ function index(){
 }
 
 /* ---------- sidebar ---------- */
+const SICO=(()=>{ const sv=d=>`<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+  return { all:sv('<rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/>'),
+    __none:sv('<path d="M4 13.5V18a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4.5"/><path d="M4 13.5l2.4-8A2 2 0 0 1 8.3 4h7.4a2 2 0 0 1 1.9 1.5l2.4 8"/><path d="M4 13.5h4.5l1.2 2h4.6l1.2-2H20"/>'),
+    __noted:sv('<path d="M14.5 4.5l5 5L9 20H4v-5z"/><path d="M12.5 6.5l5 5"/>'),
+    __trash:sv('<path d="M4.5 7h15"/><path d="M9.5 7V4.8h5V7"/><path d="M6.5 7l.9 12.2a1 1 0 0 0 1 .8h7.2a1 1 0 0 0 1-.8L17.5 7"/>') }; })();
+const CHEV='<svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 function renderTree(){
   const nDel=Object.keys(cat.deleted||{}).filter(k=>BY[k]).length;
-  $('#special').innerHTML = [['', '🗂 Tüm gönderiler', DATA.length-nDel], ['__none','📥 Atanmamış', uncategorized], ['__noted','📝 Notlu / etiketli', DATA.filter(p=>{if(isDel(p.c)) return false; const m=note(p.c);return m.note||(m.tags&&m.tags.length)}).length], ...(nDel?[['__trash','🗑 Silinenler', nDel]]:[])]
-    .map(([v,l,n])=>`<li><div class="node ${ui.sel===v?'sel':''}" data-sp="${v}"><span class="caret leaf"></span><span class="nname">${l}</span><span class="ncount" style="display:block">${n}</span></div></li>`).join('');
+  $('#special').innerHTML = [['', 'Tüm gönderiler', DATA.length-nDel], ['__none','Atanmamış', uncategorized], ['__noted','Notlu / etiketli', DATA.filter(p=>{if(isDel(p.c)) return false; const m=note(p.c);return m.note||(m.tags&&m.tags.length)}).length], ...(nDel?[['__trash','Silinenler', nDel]]:[])]
+    .map(([v,l,n])=>`<li><div class="node ${ui.sel===v?'sel':''}" data-sp="${v}"><span class="sico">${SICO[v||'all']}</span><span class="nname">${l}</span><span class="ncount">${n}</span></div></li>`).join('');
   const build = pid => kids(pid).map(n=>{ const ch=kids(n.id).length, open=ui.open[n.id];
     return `<li><div class="node ${ui.sel===n.id?'sel':''}" data-id="${n.id}" draggable="true">
-      <button class="caret ${ch?'':'leaf'}" data-act="toggle" aria-label="Aç/kapat">${open?'▾':'▸'}</button>
+      <button class="caret ${ch?'':'leaf'} ${open?'open':''}" data-act="toggle" aria-label="Aç/kapat">${CHEV}</button>
       <span class="dot" style="background:${color(n.id)}"></span>
       <span class="nname" title="${esc(pathStr(n.id))}">${esc(n.name)}</span><span class="ncount">${total[n.id]||0}</span>
-      <span class="nact"><button data-act="add" title="Alt kategori ekle">＋</button><button data-act="more" title="Diğer">⋯</button></span>
+      <span class="nact"><button data-act="add" title="Alt kategori ekle" aria-label="Alt kategori ekle"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></button><button data-act="more" title="Diğer" aria-label="Diğer"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><circle cx="5.5" cy="12" r="1.4" fill="currentColor"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/><circle cx="18.5" cy="12" r="1.4" fill="currentColor"/></svg></button></span>
     </div>${ch&&open?`<ul>${build(n.id)}</ul>`:''}</li>`}).join('');
   $('#tree').innerHTML = build('') || '<li class="sub" style="padding:6px;color:var(--muted);font-size:13px">Henüz kategori yok.</li>';
   const tags=Object.entries(tagCount).sort((a,b)=>b[1]-a[1]||coll.compare(a[0],b[0]));
