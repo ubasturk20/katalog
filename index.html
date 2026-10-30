@@ -1249,7 +1249,13 @@ setTimeout(async()=>{ const R0=window.__D&&window.__D.remoteRaw; if(!R0) return;
 $('#saveBtn').onclick=()=>saveFile(false);
 document.addEventListener('keydown',e=>{ if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault(); saveFile(false);} if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'&&!e.target.matches('input,textarea')){e.preventDefault(); undo();} if(e.key==='Escape'&&selMode&&!document.querySelector('dialog[open]')) toggleSel(false); });
 $('#undoBtn').onclick=undo;
-$('#menuBtn').onclick=e=>{e.stopPropagation(); $('#menu').hidden=!$('#menu').hidden};
+$('#menuBtn').onclick=e=>{e.stopPropagation(); const m=$('#menu'); if(!m.hidden){ m.hidden=true; return; }
+  // menü her zaman ekranın içinde açılsın (üst bar iki satıra taşınca ⋯ solda kalıyordu; menü ekran dışına/yan panelin arkasına açılıyordu)
+  if(m.parentElement!==document.body) document.body.appendChild(m); m.hidden=false;
+  const r=e.currentTarget.getBoundingClientRect(), w=m.offsetWidth, h=m.offsetHeight, vw=document.documentElement.clientWidth, vh=innerHeight;
+  const left=Math.max(8,Math.min(r.right-w,vw-w-8)); let top=r.bottom+6; if(top+h>vh-8) top=Math.max(8,Math.min(r.top-h-6,vh-h-8));
+  Object.assign(m.style,{position:'fixed',left:left+'px',top:top+'px',right:'auto',maxHeight:(vh-16)+'px',overflowY:'auto',zIndex:1000}); };
+window.addEventListener('resize',()=>{ $('#menu').hidden=true; });
 document.addEventListener('click',()=>$('#menu').hidden=true);
 $('#menu').addEventListener('click',async e=>{ const a=e.target.closest('[data-a]')?.dataset.a; if(!a) return; $('#menu').hidden=true;
   if(a==='open') $('#fileIn').click();
