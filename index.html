@@ -106,6 +106,9 @@ main{overflow:auto;position:relative;overscroll-behavior:contain;overflow-anchor
 .who b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .who span{color:var(--muted);flex:none}
 .cap{margin:5px 0 0;font-size:13px;color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.cnote{margin:5px 0 0;font-size:13px;font-weight:600;color:var(--ink,inherit);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.35}
+.cnote .nico{display:inline-block;margin-right:4px;font-size:12px;filter:saturate(1.2)}
+.cap.capsub{margin-top:3px;font-size:12px;opacity:.5;-webkit-line-clamp:1}
 .ctags{display:flex;gap:4px;flex-wrap:wrap;margin-top:7px}
 .ctag{font-size:11.5px;background:var(--chip);border-radius:6px;padding:2px 7px;display:inline-flex;align-items:center;gap:5px}
 .ctag i{width:7px;height:7px;border-radius:2px;display:inline-block}
@@ -198,6 +201,7 @@ body.filedrag::after{content:'Dosyaları buraya bırak → kataloğa ekle';posit
   .card{border-radius:10px}
   .card .meta{padding:5px 7px 6px}
   .card .cap,.card .ctags,.card .who span{display:none}
+  .card .cnote{font-size:11.5px;margin-top:3px;-webkit-line-clamp:1}
   .card .who{font-size:11px}
   .badge{top:5px;right:5px;font-size:10px;padding:2px 6px}
   header{flex-wrap:nowrap;position:fixed;top:0;left:0;right:0;z-index:20;padding:8px 10px;transition:transform .22s ease;will-change:transform}
@@ -423,6 +427,7 @@ dialog#pick[open]{display:flex;flex-direction:column;max-height:calc(var(--vvh,1
       <button data-a="reload" id="mReload">🔄 OneDrive'dan yenile</button>
       <button data-a="saveas">⬇ Bir kopyasını indir</button>
       <button data-a="igsync">📥 Instagram'dan yenileri al…</button>
+      <button data-a="fbsync">📘 Facebook'tan yenileri al…</button>
 <button data-a="csv">📄 Excel için CSV dışa aktar</button>
       <button data-a="history">🕘 Otomatik yedekler…</button>
       <button data-a="logout">↪ Oturumu kapat / hesap değiştir…</button>
@@ -1096,8 +1101,8 @@ function cardHTML(p){
   const tr=(f&&isVid(f)&&p.pv&&!p.pv.startsWith('data:'))?p.pv:f;
   const m=!f?'<div class="missing">Dosya yok</div>':th?`<img src="${th}" data-r="${String(tr).replace(/"/g,'&quot;')}" loading="lazy" alt="">`:`<div class="missing">${isVid(f)?'▶ Video':'Önizleme yok'}</div>`;
   const a=assigned(p.c), mt=note(p.c);
-  const tags=a.slice(0,3).map(id=>`<span class="ctag"><i style="background:${color(id)}"></i>${esc(N(id).name)}</span>`).join('')+(a.length>3?`<span class="ctag">+${a.length-3}</span>`:'')+(mt.tags||[]).slice(0,3).map(t=>`<span class="ctag user">#${esc(t)}</span>`).join('')+(mt.note?'<span class="ctag user">📝</span>':'');
-  return `<span class="check">✓</span><div class="thumb">${m}${badge}<button class="fav ${isFav(p.c)?'on':''}" data-fav="1" aria-label="${isFav(p.c)?'Favorilerden çıkar':'Favorilere ekle'}" aria-pressed="${isFav(p.c)}"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 20.5s-7.5-4.6-9.6-9.2C.9 7.9 3 4.5 6.4 4.5c2.1 0 3.6 1.2 4.4 2.5h2.4c.8-1.3 2.3-2.5 4.4-2.5 3.4 0 5.5 3.4 4 6.8-2.1 4.6-9.6 9.2-9.6 9.2z"/></svg></button></div><div class="meta"><div class="who"><b>${esc(uname(p))}</b><span>${ACCS.length>1&&p.a!==ACCS[0]?'◆ ':''}${p.y}</span></div>${p.cap?`<p class="cap">${esc(p.cap.slice(0,220))}</p>`:''}${tags?`<div class="ctags">${tags}</div>`:''}</div>`;
+  const tags=a.slice(0,3).map(id=>`<span class="ctag"><i style="background:${color(id)}"></i>${esc(N(id).name)}</span>`).join('')+(a.length>3?`<span class="ctag">+${a.length-3}</span>`:'')+(mt.tags||[]).slice(0,3).map(t=>`<span class="ctag user">#${esc(t)}</span>`).join('');
+  return `<span class="check">✓</span><div class="thumb">${m}${badge}<button class="fav ${isFav(p.c)?'on':''}" data-fav="1" aria-label="${isFav(p.c)?'Favorilerden çıkar':'Favorilere ekle'}" aria-pressed="${isFav(p.c)}"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 20.5s-7.5-4.6-9.6-9.2C.9 7.9 3 4.5 6.4 4.5c2.1 0 3.6 1.2 4.4 2.5h2.4c.8-1.3 2.3-2.5 4.4-2.5 3.4 0 5.5 3.4 4 6.8-2.1 4.6-9.6 9.2-9.6 9.2z"/></svg></button></div><div class="meta"><div class="who"><b>${esc(uname(p))}</b><span>${ACCS.length>1&&p.a!==ACCS[0]?'◆ ':''}${p.y}</span></div>${mt.note?`<p class="cnote" title="Not"><span class="nico" aria-hidden="true">📝</span>${esc(mt.note.slice(0,220))}</p>${p.cap?`<p class="cap capsub">${esc(p.cap.slice(0,160))}</p>`:''}`:(p.cap?`<p class="cap">${esc(p.cap.slice(0,220))}</p>`:'')}${tags?`<div class="ctags">${tags}</div>`:''}</div>`;
 }
 function more(){ const fr=document.createDocumentFragment();
   const grid=$('#grid'); list.slice(shown,shown+PAGE).forEach(p=>{ if(grid.querySelector(`.card[data-c="${CSS.escape(p.c)}"]`)) return; const el=document.createElement('article'); el.className='card'+(picked.has(p.c)?' picked':''); el.tabIndex=0; el.draggable=true; el.dataset.c=p.c; el.innerHTML=cardHTML(p); fr.appendChild(el);});
@@ -1144,6 +1149,14 @@ async function igSync(){ const s=cat.meta[IGS]||{}; const nAcc=DATA.filter(p=>p.
   const txt=`UB Medya Arşiv — Instagram eşitle: uurbasturk hesabında son eşitlemeden sonra kaydedilenleri al, "Instagram ${tag}" koleksiyonuna ekle. Son eşitleme: ${s.at||'ilk arşiv'}. Katalogdaki uurbasturk gönderisi: ${nAcc}.`;
   let ok=false; try{ await navigator.clipboard.writeText(txt); ok=true; }catch{ try{ const t=document.createElement('textarea'); t.value=txt; document.body.appendChild(t); t.select(); ok=document.execCommand('copy'); t.remove(); }catch{} }
   await ask({title:"Instagram'dan yenileri al",body:`<b>Hesap:</b> uurbasturk<br><b>Son eşitleme:</b> ${last}<br><br>Yeni kaydedilenleri Claude çeker: medyayı indirir, açıklamaları Türkçeye çevirir, gerekiyorsa Türkçe altyazı ekler ve hepsini <b>“Instagram ${tag}”</b> koleksiyonuna koyar.<br><br>1. Bilgisayarda, Claude uygulamasının tarayıcısında Instagram'a <b>uurbasturk</b> ile giriş yapmış ol.<br>2. ${ok?'Talimat panoya kopyalandı — ':'Aşağıdaki metni kopyala ve '}Claude'a yapıştır.<br><br><span style="font-size:12.5px;color:var(--muted);user-select:all">${esc(txt)}</span>`,buttons:[{label:'Tamam',v:1,cls:'primary'}]}); }
+/* ---------- Facebook'tan yeni kaydedilenler ---------- */
+const FBS='__fbsync';
+async function fbSync(){ const s=cat.meta[FBS]||{}; const nAcc=DATA.filter(p=>p.a==='facebook'&&!p.grp).length;
+  const d=new Date(), tag=[d.getDate(),d.getMonth()+1,d.getFullYear()%100].map(x=>String(x).padStart(2,'0')).join('.');
+  const last=s.at?new Date(s.at).toLocaleString('tr-TR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})+(s.coll?` · “${esc(s.coll)}” (${s.n||0} gönderi)`:''):'Henüz yapılmadı';
+  const txt=`UB Medya Arşiv — Facebook eşitle: Facebook "Kaydedilenler"de son eşitlemeden sonra kaydedilenleri al, "Facebook ${tag}" koleksiyonuna ekle (Türkçe açıklama + gerekiyorsa Türkçe altyazı). Son eşitleme: ${s.at||'yok'}. Katalogdaki Facebook gönderisi: ${nAcc}.`;
+  let ok=false; try{ await navigator.clipboard.writeText(txt); ok=true; }catch{ try{ const t=document.createElement('textarea'); t.value=txt; document.body.appendChild(t); t.select(); ok=document.execCommand('copy'); t.remove(); }catch{} }
+  await ask({title:"Facebook'tan yenileri al",body:`<b>Kaynak:</b> Facebook · Kaydedilenler<br><b>Son eşitleme:</b> ${last}<br><b>Katalogdaki Facebook gönderisi:</b> ${nAcc}<br><br>Yeni kaydedilenleri Claude çeker: videoları indirir, açıklamaları Türkçeye çevirir, gerekiyorsa Türkçe altyazı ekler ve hepsini <b>“Facebook ${tag}”</b> koleksiyonuna koyar.<br><br>1. Bilgisayarda, Claude uygulamasının tarayıcısında Facebook'a giriş yapmış ol.<br>2. ${ok?'Talimat panoya kopyalandı — ':'Aşağıdaki metni kopyala ve '}Claude'a yapıştır.<br><br><span style="font-size:12.5px;color:var(--muted);user-select:all">${esc(txt)}</span>`,buttons:[{label:'Tamam',v:1,cls:'primary'}]}); }
 /* ---------- kalıcı silme (Silinenler) ---------- */
 const filesOf=p=>[...(p.f||[]),...(p.pv&&/^media\//.test(p.pv)?[p.pv]:[])];
 const fmtSize=b=>b>=1e9?(b/1e9).toLocaleString('tr-TR',{maximumFractionDigits:2})+' GB':b>=1e6?Math.round(b/1e6).toLocaleString('tr-TR')+' MB':Math.max(1,Math.round(b/1e3))+' KB';
@@ -1246,7 +1259,7 @@ $('#lbCats').addEventListener('click',async e=>{ const r=e.target.closest('[data
 $('#lbSug').addEventListener('click',e=>{ const b=e.target.closest('[data-sg]'); if(!b) return; snapshot(); const a=assigned(curCode); a.push(b.dataset.sg); cat.assign[curCode]=a; changed(); renderLbMeta(); });
 $('#lbTags').addEventListener('click',e=>{ const b=e.target.closest('[data-rt]'); if(!b) return; snapshot(); const m=cat.meta[curCode]; m.tags=m.tags.filter(t=>t!==b.dataset.rt); cleanMeta(curCode); changed(); renderLbMeta(); });
 $('#tagIn').addEventListener('keydown',e=>{ if(e.key!=='Enter') return; const v=e.target.value.split(',').map(s=>s.trim().replace(/^#/,'')).filter(Boolean); if(!v.length) return; snapshot(); const m=cat.meta[curCode]||(cat.meta[curCode]={}); m.tags=[...new Set([...(m.tags||[]),...v])]; e.target.value=''; changed(); renderLbMeta(); });
-let noteT; $('#lbNote').addEventListener('input',e=>{ clearTimeout(noteT); const c=curCode, v=e.target.value; noteT=setTimeout(()=>{ snapshot(); const m=cat.meta[c]||(cat.meta[c]={}); m.note=v; cleanMeta(c); changed(); },500); });
+let noteT; $('#lbNote').addEventListener('input',e=>{ clearTimeout(noteT); const c=curCode, v=e.target.value; noteT=setTimeout(()=>{ snapshot(); const m=cat.meta[c]||(cat.meta[c]={}); m.note=v; cleanMeta(c); changed(); try{ refreshCard(c); }catch(e){} },500); });
 function cleanMeta(c){ const m=cat.meta[c]; if(!m) return; if(!m.note) delete m.note; if(m.tags&&!m.tags.length) delete m.tags; if(!Object.keys(m).length) delete cat.meta[c]; }
 const step=d=>{const n=BY[curCode].f.length; if(n>1){idx=(idx+d+n)%n; renderLb(); anim($('#media'),[{opacity:.2,transform:`translateX(${d*28}px)`},{opacity:1,transform:'none'}],240);}};
 const post=d=>{const NL=seq(); cur=NL.indexOf(curCode); const n=cur+d; if(cur>=0&&n>=0&&n<NL.length){cur=n; curCode=NL[n]; idx=0; renderLb(); $('.lbg').scrollTop=0; anim($('.lbg'),[{opacity:0,transform:`translateX(${d*46}px)`},{opacity:1,transform:'none'}],300);}};
@@ -1464,6 +1477,7 @@ function mergeVal(b,l,r){ if(jeq(l,b)) return r; if(jeq(r,b)) return l; if(jeq(l
 function merge3(base,local,remote){ const B=base||{}; const out={...remote};
   for(const f of SYNC_MAPS){ const b=base?(B[f]||{}):{}, l=local[f]||{}, r=remote[f]||{}; const o={};
     for(const k of new Set([...Object.keys(b),...Object.keys(l),...Object.keys(r)])){ const v=base?mergeVal(b[k],l[k],r[k]):(l[k]===undefined?r[k]:r[k]===undefined?l[k]:mergeVal(undefined,l[k],r[k])); if(v!==undefined) o[k]=v; }
+    if(f==='purged'){ /*purged-birlesim*/ for(const x of [b,l,r]) for(const k in x) if(o[k]===undefined) o[k]=x[k]; }
     out[f]=o; }
   out.seeds=[...new Set([...(remote.seeds||[]),...(local.seeds||[])])];
   out.queue=mergeArr(base?(B.queue||[]):[],local.queue||[],remote.queue||[]);
@@ -1533,6 +1547,7 @@ $('#menu').addEventListener('click',async e=>{ const a=e.target.closest('[data-a
   if(a==='csv') exportCSV();
   if(a==='logout'){ const v=await ask({title:'Oturum kapatılsın mı?',body:'Bu cihazda Microsoft oturumu kapanır; sonra istediğin hesapla yeniden giriş yaparsın. Kaydedilmemiş değişiklik varsa önce OneDrive’a kaydedilir.',buttons:[{label:'Vazgeç',v:null},{label:'Oturumu kapat',v:1,cls:'primary'}]}); if(v){ try{ if(dirtyFile) await saveFile(false,true); }catch(e){} window.__logout(); } }
   if(a==='igsync') igSync();
+  if(a==='fbsync') fbSync();
   if(a==='history') showHistory();
   if(a==='reset'){ const v=await ask({title:'Instagram koleksiyonlarına sıfırla?',body:'Tüm kategori düzenlemelerin, notların ve etiketlerin başlangıç durumuna döner. Bilgisayardan eklediğin gönderiler ve indirilecekler listesi korunur. (Geri al ile geri getirebilirsin.)',buttons:[{label:'Vazgeç',v:null},{label:'Sıfırla',v:1,cls:'primary'}]}); if(v){ snapshot(); const keep={custom:cat.custom||{},queue:cat.queue||[],deleted:cat.deleted||{}}; cat=fresh(); Object.assign(cat,keep); mergeSeeds(cat); ui.sel=''; changed(); } }
 });
